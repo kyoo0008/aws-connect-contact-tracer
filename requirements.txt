@@ -1,0 +1,8 @@
+boto3
+graphviz
+datetime
+pytz
+pycairo
+PyGObject
+packaging
+numpy

@@ -1,0 +1,307 @@
+[
+    {
+        "en_name": "AssociateContactToCustomerProfile",
+        "ko_name": "지속적인 연락처 연결 생성",
+        "ko_desc": "속성을 지정하여 지속적인 연락처 연결을 생성합니다."
+    },
+    {
+        "en_name": "AuthenticateParticipant",
+        "ko_name": "고객 인증",
+        "ko_desc": "AWS Cognito에 구성된 대로 제공되는 ID를 사용해 로그인하고 인증하라는 메시지를 고객에게 표시합니다. 이 블록은 OpenID Connect 또는 SAML을 사용하여 인증 및 토큰 요청을 위해 구성된 ID 공급자와 상호 작용합니다."
+    },
+    {
+        "en_name": "Cases",
+        "ko_name": "사례",
+        "ko_desc": "사례를 가져오거나 업데이트하거나 생성합니다."
+    },
+    {
+        "en_name": "ChangeRoutingPriority",
+        "ko_name": "라우팅 우선순위/수명 변경",
+        "ko_desc": "대기열에서 연락처의 우선순위 또는 수명을 변경합니다."
+    },
+    {
+        "en_name": "CheckAttribute",
+        "ko_name": "연락처 속성 확인",
+        "ko_desc": "연락처 속성의 값에 대한 비교를 기반으로 분기합니다."
+    },
+    {
+        "en_name": "CheckContactAttributes",
+        "ko_name": "연락처 속성 확인",
+        "ko_desc": "연락처 속성의 값에 대한 비교를 기반으로 분기합니다."
+    },
+    {
+        "en_name": "CheckHoursOfOperation",
+        "ko_name": "작업 시간 확인",
+        "ko_desc": "작업 시간을 확인하고, 지금이 작업 시간인지 여부를 기반으로 분기합니다."
+    },
+    {
+        "en_name": "CheckQueueStatus",
+        "ko_name": "대기열 상태 확인",
+        "ko_desc": "가장 오래된 연락처 또는 태스크가 대기열에 있었던 시간, 대기열 용량을 확인하고 분기합니다. 일치하는 항목이 없는 경우 연락처는 일치 항목 없음 분기로 라우팅됩니다."
+    },
+    {
+        "en_name": "CheckStaffing",
+        "ko_name": "인력 확인",
+        "ko_desc": "에이전트를 사용할 수 있거나 인력이 제공되거나(예: 사용 가능, 통화 중 또는 통화 후) 또는 온라인 상태인지 여부를 기반으로 분기합니다."
+    },
+    {
+        "en_name": "CreatePersistentContactAssociation",
+        "ko_name": "지속적인 연락처 연결 생성",
+        "ko_desc": "속성을 지정하여 지속적인 연락처 연결을 생성합니다."
+    },
+    {
+        "en_name": "CreateTask",
+        "ko_name": "태스크 생성",
+        "ko_desc": "할당된 흐름을 실행할 새 태스크를 생성합니다."
+    },
+    {
+        "en_name": "CustomerProfiles",
+        "ko_name": "고객 프로필",
+        "ko_desc": "프로필에서 객체 데이터를 가져오고, 업데이트하고, 생성하고, 연락처를 연결하고, 검색할 수 있습니다."
+    },
+    {
+        "en_name": "CreateCustomerProfile",
+        "ko_name": "고객 프로필",
+        "ko_desc": "프로필에서 객체 데이터를 가져오고, 업데이트하고, 생성하고, 연락처를 연결하고, 검색할 수 있습니다."
+    },
+    {
+        "en_name": "Dial",
+        "ko_name": "호출 전화번호",
+        "ko_desc": "고객에 대한 통화를 시작합니다. 필요한 경우 수신자에게 표시할 발신자 ID 번호를 설정할 수 있습니다."
+    },
+    {
+        "en_name": "Disconnect",
+        "ko_name": "연결 해제",
+        "ko_desc": "상호 작용을 종료합니다."
+    },
+    {
+        "en_name": "DistributeByPercentage",
+        "ko_name": "비율별로 배포",
+        "ko_desc": "지정된 비율에 따라 고객을 무작위로 라우팅합니다."
+    },
+    {
+        "en_name": "GetCustomerInput",
+        "ko_name": "고객 입력 가져오기",
+        "ko_desc": "고객 의도를 기반으로 분기합니다."
+    },
+    {
+        "en_name": "ConnectParticipantWithLexBot",
+        "ko_name": "고객 입력 가져오기(LexBot)",
+        "ko_desc": "고객 의도를 기반으로 분기합니다."
+    },
+    {
+        "en_name": "GetCustomerProfile",
+        "ko_name": "고객 프로필",
+        "ko_desc": "프로필에서 객체 데이터를 가져오고, 업데이트하고, 생성하고, 연락처를 연결하고, 검색할 수 있습니다."
+    },
+    {
+        "en_name": "GetMetricData",
+        "ko_name": "대기열 측정치 가져오기",
+        "ko_desc": "흐름에서 사용할 대기열 지표를 로드합니다."
+    },
+    {
+        "en_name": "GetQueueMetrics",
+        "ko_name": "대기열 측정치 가져오기",
+        "ko_desc": "흐름에서 사용할 대기열 지표를 로드합니다."
+    },
+    {
+        "en_name": "GetUserInput",
+        "ko_name": "고객 입력 가져오기",
+        "ko_desc": "고객 의도를 기반으로 분기합니다."
+    },
+    {
+        "en_name": "HoldCustomerOrAgent",
+        "ko_name": "고객 또는 에이전트 대기",
+        "ko_desc": "고객이나 에이전트를 대기 또는 대기 취소합니다."
+    },
+    {
+        "en_name": "InvokeExternalResource",
+        "ko_name": "AWS Lambda 함수 호출",
+        "ko_desc": "AWS Lambda를 호출하고 선택적으로 연락처 속성을 설정하는 데 사용할 수 있는 키/값 페어를 반환합니다."
+    },
+    {
+        "en_name": "InvokeFlowModule",
+        "ko_name": "모듈 호출",
+        "ko_desc": "흐름에서 호출할 모듈을 선택합니다."
+    },
+    {
+        "en_name": "InvokeLambdaFunction",
+        "ko_name": "AWS Lambda 함수 호출",
+        "ko_desc": "AWS Lambda를 호출하고 선택적으로 연락처 속성을 설정하는 데 사용할 수 있는 키/값 페어를 반환합니다."
+    },
+    {
+        "en_name": "Loop",
+        "ko_name": "루프",
+        "ko_desc": "지정된 횟수 동안 반복 분기를 반복합니다. 그 이후에는 전체 분기를 따릅니다."
+    },
+    {
+        "en_name": "LoopPrompts",
+        "ko_name": "루프 프롬프트",
+        "ko_desc": "고객이나 에이전트가 대기 중이거나 대기열에 있는 동안 프롬프트의 시퀀스를 반복합니다."
+    },
+    {
+        "en_name": "PlayPrompt",
+        "ko_name": "재생 프롬프트",
+        "ko_desc": "오디오 또는 채팅 메시지를 전송합니다."
+    },
+    {
+        "en_name": "Resume",
+        "ko_name": "흐름 종료/재개",
+        "ko_desc": "연락처 연결을 해제하지 않고 흐름을 종료하지만, 루프 프롬프트 블록이 중단되면 반복을 재개합니다."
+    },
+    {
+        "en_name": "ResumeContact",
+        "ko_name": "고객 응대 재개",
+        "ko_desc": "일시 정지된 고객 응대 재개"
+    },
+    {
+        "en_name": "ReturnFromFlowModule",
+        "ko_name": "반환",
+        "ko_desc": "모듈 종료"
+    },
+    {
+        "en_name": "SendMessage",
+        "ko_name": "메시지 보내기",
+        "ko_desc": "수신자에게 메시지를 보냅니다."
+    },
+    {
+        "en_name": "SetAttributes",
+        "ko_name": "연락처 속성 설정",
+        "ko_desc": "키-값 페어를 연락처 속성으로 정의하고 저장합니다."
+    },
+    {
+        "en_name": "SetContactData",
+        "ko_name": "연락처 속성 설정",
+        "ko_desc": "키-값 페어를 연락처 속성으로 정의하고 저장합니다."
+    },
+    {
+        "en_name": "SetCustomerQueueFlow",
+        "ko_name": "고객 대기열 흐름 설정",
+        "ko_desc": "고객이 대기열로 전송될 때 실행할 흐름을 지정합니다."
+    },
+    {
+        "en_name": "SetDisconnectFlow",
+        "ko_name": "연결 해제 흐름 설정",
+        "ko_desc": "에이전트가 연결을 해제하고 고객이 통화 상태를 유지할 때 실행할 흐름을 지정합니다."
+    },
+    {
+        "en_name": "SetEventHook",
+        "ko_name": "이벤트 흐름 설정",
+        "ko_desc": "흐름을 연락처 이벤트(예: 에이전트 Workspace에서 연락처를 수락 또는 연결 해제)와 연결하는 이벤트 후크를 설정합니다."
+    },
+    {
+        "en_name": "SetFlowAttributes",
+        "ko_name": "연락처 속성 설정(Flow)",
+        "ko_desc": "키-값 페어를 연락처 속성으로 정의하고 저장합니다."
+    },
+    {
+        "en_name": "SetHoldFlow",
+        "ko_name": "대기 흐름 설정",
+        "ko_desc": "전화 통화 중 고객이나 에이전트가 대기 중일 때 호출할 흐름을 지정합니다."
+    },
+    {
+        "en_name": "SetLoggingBehavior",
+        "ko_name": "로깅 동작 설정",
+        "ko_desc": "흐름 로그를 활성화하거나 비활성화합니다."
+    },
+    {
+        "en_name": "SetQueue",
+        "ko_name": "대기열 설정",
+        "ko_desc": "연락처가 전송될 대기열을 지정합니다."
+    },
+    {
+        "en_name": "SetRecordingAndAnalyticsBehavior",
+        "ko_name": "녹음 및 분석 동작 설정",
+        "ko_desc": "통화 녹음 동작을 지정하고 음성 분석을 설정합니다. 음성 분석을 사용하려면 녹음을 설정해야 합니다."
+    },
+    {
+        "en_name": "SetRecordingBehavior",
+        "ko_name": "녹음 및 분석 동작 설정",
+        "ko_desc": "통화 녹음 동작을 지정하고 음성 분석을 설정합니다. 음성 분석을 사용하려면 녹음을 설정해야 합니다."
+    },
+    {
+        "en_name": "SetRoutingCriteria",
+        "ko_name": "라우팅 기준 설정",
+        "ko_desc": "대기열 내의 연락처를 특정 위치, 전문 지식 또는 기타 요구 사항과 일치하는 에이전트로 타겟팅합니다."
+    },
+    {
+        "en_name": "SetVoice",
+        "ko_name": "음성 설정",
+        "ko_desc": "텍스트 음성 변환 상호 작용 중에 고객이 듣는 언어와 음성을 지정합니다."
+    },
+    {
+        "en_name": "SetWhisperFlow",
+        "ko_name": "귓속말 흐름 설정",
+        "ko_desc": "연락처에 대한 고객 또는 에이전트에 재생되는 귓속말을 지정합니다."
+    },
+    {
+        "en_name": "SetWisdomAssistant",
+        "ko_name": "Amazon Q Connect",
+        "ko_desc": "Amazon Q Connect를 연락처에 연결하여 실시간 추천 활성화"
+    },
+    {
+        "en_name": "ShowView",
+        "ko_name": "보기 표시",
+        "ko_desc": "사용자 애플리케이션에서 보기를 렌더링하고 애플리케이션의 응답 대기"
+    },
+    {
+        "en_name": "StartMediaStreaming",
+        "ko_name": "미디어 스트리밍 시작",
+        "ko_desc": "Kinesis로 오디오 스트리밍을 시작합니다."
+    },
+    {
+        "en_name": "StopMediaStreaming",
+        "ko_name": "미디어 스트리밍 중지",
+        "ko_desc": "Kinesis로 오디오 스트리밍을 중지합니다."
+    },
+    {
+        "en_name": "StoreCustomerInput",
+        "ko_name": "고객 입력 저장",
+        "ko_desc": "연락처 속성에 숫자 입력을 저장합니다."
+    },
+    {
+        "en_name": "StoreUserInput",
+        "ko_name": "고객 입력 저장",
+        "ko_desc": "연락처 속성에 숫자 입력을 저장합니다."
+    },
+    {
+        "en_name": "TagContact",
+        "ko_name": "연락처 태그",
+        "ko_desc": "연락처 태그 지정 또는 태그 해제"
+    },
+    {
+        "en_name": "Transfer",
+        "ko_name": "전송",
+        "ko_desc": "현재 흐름을 종료하고 고객을 고객 응대 흐름으로 전송합니다."
+    },
+    {
+        "en_name": "TransferToFlow",
+        "ko_name": "흐름으로 전송",
+        "ko_desc": "현재 흐름을 종료하고 고객을 고객 응대 흐름으로 전송합니다."
+    },
+    {
+        "en_name": "TransferToPhoneNumber",
+        "ko_name": "전화번호로 전송",
+        "ko_desc": "고객을 전화번호로 전송합니다."
+    },
+    {
+        "en_name": "TransferToQueue",
+        "ko_name": "대기열로 전송",
+        "ko_desc": "현재 흐름을 종료하고 연락처를 대기열로 전송합니다."
+    },
+    {
+        "en_name": "UpdateAgentState",
+        "ko_name": "고객 또는 에이전트 대기",
+        "ko_desc": "고객이나 에이전트를 대기 또는 대기 취소합니다."
+    },
+    {
+        "en_name": "UpdateContactCallbackNumber",
+        "ko_name": "콜백 번호 설정",
+        "ko_desc": "속성을 지정하여 고객 콜백 번호를 설정합니다."
+    },
+    {
+        "en_name": "Wait",
+        "ko_name": "대기",
+        "ko_desc": "지정된 기간 동안 대기하고 선택적으로 지정된 이벤트에 대해 대기합니다. 이 블록은 채팅 및 태스크에만 지원됩니다."
+    }
+]
