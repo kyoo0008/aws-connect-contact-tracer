@@ -62,7 +62,6 @@ def sanitize_label(label):
     return re.sub(r'[\x00-\x1F\x7F]', '', label)
 
 def fetch_logs(contact_id, initiation_timestamp, region, log_group):
-
     cloudwatch_client = boto3.client("logs", region_name=region)
 
     """
@@ -82,11 +81,12 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
     # End Time
     end_time = initiation_time + timedelta(hours=12)
 
+    # Lambda Log Group
+    lambda_log_groups = set()
+
     try:
         start_query_response = cloudwatch_client.start_query(
             logGroupName=log_group,
-            # startTime=int((datetime.today() - timedelta(hours=12)).timestamp()),
-            # endTime=int(datetime.now().timestamp()),
             startTime=int(start_time.timestamp()),  # UTC 기준 -12시간
             endTime=int(end_time.timestamp()),  # UTC 기준 +12시간
             queryString=query,
@@ -119,6 +119,13 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
                     logs.append(json_value)
                     contact_flow_ids.add(json_value.get("ContactFlowId"))
 
+                # Lambda 함수 수집 
+                if json_value.get("ContactFlowModuleType") == "InvokeExternalResource":
+                    function_arn = json_value.get("Parameters")["FunctionArn"]
+                    lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn))
+                    if "idnv-common-if" in function_arn: # common-if 예외처리 
+                        lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn.replace("common-if","async-if")))
+
     # JSON 파일 저장    
     output_json_path = f"./virtual_env/contact_flow_{contact_id}.json"
     with open(output_json_path, "w", encoding="utf-8") as json_file:
@@ -140,10 +147,77 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
             if not os.path.isfile(jsonfile_name):
                 get_contact_flow_module(contact_flow_id)
 
+    for lambda_log_group in lambda_log_groups:
+        fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
 
     return logs
 
-def wrap_text(text, isJustCut=False, max_length=72, wrap_at=25):
+def get_lambda_log_groups_from_arn(arn):
+    return "/aws/lmd/aicc-connect-flow-base/"+("-".join(arn.split(":")[6].split("-")[3:]))
+
+def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
+
+    cloudwatch_client = boto3.client("logs", region_name=region)
+
+    """
+    CloudWatch Logs에서 ContactId에 해당하는 로그를 가져옵니다.
+    """
+    query = f"""
+        fields @timestamp, @message
+        | filter ContactId = \"{contact_id}\"
+        | sort @timestamp asc
+        """
+
+    initiation_time = datetime.fromisoformat(initiation_timestamp).astimezone(pytz.UTC)
+
+    # Start Time
+    start_time = initiation_time - timedelta(hours=12)
+
+    # End Time
+    end_time = initiation_time + timedelta(hours=12)
+
+    try:
+        start_query_response = cloudwatch_client.start_query(
+            logGroupName=log_group,
+            startTime=int(start_time.timestamp()),  # UTC 기준 -12시간
+            endTime=int(end_time.timestamp()),  # UTC 기준 +12시간
+            queryString=query,
+        )
+    except Exception as e:
+        if "MalformedQueryException" in str(e) :
+            print(f"Error : {e}, 1일 전부터 발생한 ContactId 입력 후 조회 가능합니다.")
+        else:
+            print(f"Error : {e}")
+        sys.exit(1)
+
+    query_id = start_query_response["queryId"]
+
+    # 쿼리 결과 기다리기
+    response = None
+    while response is None or response["status"] == "Running":
+        time.sleep(1)
+        response = cloudwatch_client.get_query_results(queryId=query_id)
+
+
+    logs = []
+    if len(response["results"]) > 0:
+
+        for result in response["results"]:
+            for field in result:
+                if field["field"] == "@message":
+                    json_value = json.loads(field["value"])
+                    logs.append(json_value)
+
+
+        # JSON 파일 저장    
+        output_json_path = f"./virtual_env/{log_group.split("/")[4]}_{contact_id}.json"
+        with open(output_json_path, "w", encoding="utf-8") as json_file:
+            json.dump(logs, json_file, ensure_ascii=False, indent=4)
+
+        # print(f"JSON 파일이 저장되었습니다: {output_json_path}")
+
+
+def wrap_text(text, is_just_cut=False, max_length=72, wrap_at=25):
     """
     - 25자마다 줄바꿈
     - 최대 72자(3줄)까지만 표시하고 초과하면 "..." 추가
@@ -152,7 +226,7 @@ def wrap_text(text, isJustCut=False, max_length=72, wrap_at=25):
         return ""
 
     # 25자 단위로 줄바꿈 추가
-    if not isJustCut:
+    if not is_just_cut:
         wrapped_text = "\n".join([text[i:i+wrap_at] for i in range(0, len(text), wrap_at)])
 
         # 초과 시 "..." 추가

@@ -104,7 +104,7 @@ def get_node_text_by_module_type(module_type,log,block_id):
         value = param_json.get("Value") # 비교할 값 
         second_value = param_json.get("SecondValue") # Flow에서 들어온 값 
 
-        value = wrap_text(value,isJustCut=False,max_length=50)
+        value = wrap_text(value,is_just_cut=False,max_length=50)
 
 
         if log.get("ContactFlowId") and block_id:
@@ -144,12 +144,12 @@ def get_node_text_by_module_type(module_type,log,block_id):
         if param_json.get("Parameters"): 
             parameters = param_json.get("Parameters")
             for key in parameters:
-                node_text += f"{wrap_text(f"{key} = {parameters[key]}",isJustCut=True,max_length=25)} \n"
+                node_text += f"{wrap_text(f"{key} = {parameters[key]}",is_just_cut=True,max_length=25)} \n"
 
         if replaced_arn_log.get("ExternalResults"):
             node_footer = "ExternalResults : " + wrap_text(
                 json.dumps(replaced_arn_log.get("ExternalResults"), indent=2, ensure_ascii=False),
-                isJustCut=True,
+                is_just_cut=True,
                 max_length=30)
     elif module_type == "PlayPrompt" or module_type == "GetUserInput" or module_type == "StoreUserInput":
         param_str = param_json.get("Text")
@@ -169,8 +169,8 @@ def get_node_text_by_module_type(module_type,log,block_id):
 
     elif module_type == "SetAttributes" or module_type == "SetFlowAttributes":
         for param in param_json:    
-            node_text += f"{wrap_text(f"{param['Key']} = {param['Value']}",isJustCut=True,max_length=30)} \n"
-        # node_text += f"{wrap_text(f"{param_json['Key']} = {param_json['Value']}",isJustCut=True,max_length=25)} \n"
+            node_text += f"{wrap_text(f"{param['Key']} = {param['Value']}",is_just_cut=True,max_length=30)} \n"
+        # node_text += f"{wrap_text(f"{param_json['Key']} = {param_json['Value']}",is_just_cut=True,max_length=25)} \n"
         
     elif module_type == "SetLoggingBehavior":
         node_text += f"LoggingBehavior = {param_json['LoggingBehavior']}"
@@ -191,13 +191,13 @@ def get_node_text_by_module_type(module_type,log,block_id):
     else:
 
         for key in param_json:
-            node_text += f"{wrap_text(f"{key} = {param_json[key]}",isJustCut=True,max_length=25)} \n"
+            node_text += f"{wrap_text(f"{key} = {param_json[key]}",is_just_cut=True,max_length=25)} \n"
 
 
         if replaced_arn_log.get('Results'):
             node_footer = "Results : " + replaced_arn_log.get('Results')
 
-    node_text = wrap_text(node_text,isJustCut=True,max_length=100)
+    node_text = wrap_text(node_text,is_just_cut=True,max_length=100)
 
     return node_text, node_footer
 
@@ -333,6 +333,18 @@ def add_node_cache(module_type,node_cache, node_id, log, is_error):
 
     return node_cache
 
+def is_lambda_error(log):
+    if log.get('ContactFlowModuleType') == "InvokeExternalResource" :
+        try:
+            if log.get("ExternalResults")["isSuccess"] == "false":
+                return True
+        except KeyError:
+            return False
+        except TypeError:
+            return False
+    else:
+        return False 
+
 # flow 묶음 처리
 def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_id):
 
@@ -348,6 +360,10 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
             max_timestamp = timestamp
 
         if any(keyword in log.get('Results', '') for keyword in ERROR_KEYWORDS):
+            error_count += 1
+
+        # Lambda 예외 처리
+        if is_lambda_error(log):
             error_count += 1
 
     # 서브 그래프 생성
@@ -401,7 +417,7 @@ def build_module_detail(logs, module_name):
 
     last_module_type = ""
     for index, log in enumerate(logs):
-        is_error = any(keyword in log.get('Results', '') for keyword in ERROR_KEYWORDS)
+        is_error = any(keyword in log.get('Results', '') for keyword in ERROR_KEYWORDS) or is_lambda_error(log)
         node_id = f"{log['Timestamp'].replace(':', '').replace('.', '')}_{index}"
         module_type = log.get('ContactFlowModuleType')
         
@@ -447,7 +463,8 @@ def build_contact_flow_detail(logs, flow_name, contact_id):
     last_module_type = ""
 
     for index, log in enumerate(logs):
-        is_error = any(keyword in log.get('Results', '') for keyword in ERROR_KEYWORDS)
+        is_error = any(keyword in log.get('Results', '') for keyword in ERROR_KEYWORDS) or is_lambda_error(log)
+
         node_id = f"{log['Timestamp'].replace(':', '').replace('.', '')}_{index}"
 
         module_type = log.get('ContactFlowModuleType')
