@@ -147,13 +147,18 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
             if not os.path.isfile(jsonfile_name):
                 get_contact_flow_module(contact_flow_id)
 
-    for lambda_log_group in lambda_log_groups:
-        fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
+    lambda_logs = {}
 
-    return logs
+    for lambda_log_group in lambda_log_groups:
+        lambda_logs[lambda_log_group.split("/")[4]] = fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
+
+    return logs, lambda_logs
+
+def get_func_name(arn):
+    return "-".join(arn.split(":")[6].split("-")[3:])
 
 def get_lambda_log_groups_from_arn(arn):
-    return "/aws/lmd/aicc-connect-flow-base/"+("-".join(arn.split(":")[6].split("-")[3:]))
+    return "/aws/lmd/aicc-connect-flow-base/"+get_func_name(arn)
 
 def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
 
@@ -200,6 +205,7 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
 
 
     logs = []
+
     if len(response["results"]) > 0:
 
         for result in response["results"]:
@@ -208,11 +214,12 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
                     json_value = json.loads(field["value"])
                     logs.append(json_value)
 
+    return logs
 
         # JSON 파일 저장    
-        output_json_path = f"./virtual_env/{log_group.split("/")[4]}_{contact_id}.json"
-        with open(output_json_path, "w", encoding="utf-8") as json_file:
-            json.dump(logs, json_file, ensure_ascii=False, indent=4)
+        # output_json_path = f"./virtual_env/{log_group.split("/")[4]}_{contact_id}.json"
+        # with open(output_json_path, "w", encoding="utf-8") as json_file:
+        #     json.dump(logs, json_file, ensure_ascii=False, indent=4)
 
         # print(f"JSON 파일이 저장되었습니다: {output_json_path}")
 
