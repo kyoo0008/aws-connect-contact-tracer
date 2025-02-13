@@ -218,21 +218,6 @@ def get_node_label(module_type, node_title, node_text, node_footer, block_id):
     
 
     # 상단 구역 (아이콘 + 한글명), 하단 구역 parameter
-    label = f"""<<table border="0" cellborder="0" cellspacing="0">
-        <tr>
-            <td bgcolor="lightgray" width="30" height="30" fixedsize="true"><img scale="true" src="{icon_path}"/></td>
-            <td bgcolor="lightgray" width="150">{node_title}</td>
-        </tr>
-        <tr>
-            <td colspan="2" bgcolor="white">{sanitize_label(node_text)}</td>
-        </tr>""" if os.path.isfile(icon_path) else f"""<<table border="0" cellborder="0" cellspacing="0">
-        <tr>
-            <td bgcolor="lightgray" width="180" fixedsize="true">{node_title}</td>
-        </tr>
-        <tr>
-            <td bgcolor="white">{sanitize_label(node_text)}</td>
-        </tr>"""
-
     top_label = f"""<<table border="0" cellborder="0" cellspacing="0">
         <tr>
             <td bgcolor="lightgray" width="30" height="30" fixedsize="true"><img scale="true" src="{icon_path}"/></td>
@@ -258,9 +243,8 @@ def get_node_label(module_type, node_title, node_text, node_footer, block_id):
     return full_label
 
 # 일반 노드 처리
-def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs):
+def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs, error_count):
     
-
     dot.attr(rankdir="LR", nodesep="0.5", ranksep="0.5")
 
     color = 'tomato' if is_error else 'lightgray'
@@ -269,23 +253,6 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
     module_type = define_module_type(module_type,log.get("Parameters",{}))
 
-    if module_type == "InvokeExternalResource":
-        function_name = get_func_name(log.get("Parameters")["FunctionArn"])
-        try:
-            target_log = [l for l in lambda_logs[function_name] \
-                                if l["ContactId"] == log.get("ContactId") and \
-                                json.dumps(log.get("Parameters")["Parameters"],ensure_ascii=False) in json.dumps(l,ensure_ascii=False)
-            ]
-            if len(target_log) > 0:
-                xray_trace_id = target_log[0].get("xray_trace_id",{})
-                print(f"xray_trace_id : {xray_trace_id}")
-
-                associated_lambda_logs = [l for l in lambda_logs[function_name] if l["xray_trace_id"] = xray_trace_id]
-
-
-        except Exception as e:
-            # print(lambda_logs[function_name])
-            print(f"Error : {e}")
     # 노드 추가
     dot.node(
         node_id,
@@ -303,7 +270,69 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
     ) 
 
     nodes.append(node_id)
-    return dot, nodes
+
+    if module_type == "InvokeExternalResource":
+        function_name = get_func_name(log.get("Parameters")["FunctionArn"])
+        try:
+
+            function_logs = lambda_logs.get(function_name, [])  # 안전한 접근
+
+            if not isinstance(function_logs, list):
+                raise TypeError(f"Expected list for function_logs, but got {type(function_logs).__name__}")
+
+            contact_id = log.get("ContactId")
+            log_parameters = log.get("Parameters", {}).get("Parameters", {})  # 안전한 접근
+
+            # target_log 찾기
+            target_log = [
+                l for l in function_logs
+                if l.get("ContactId") == contact_id and json.dumps(log_parameters, ensure_ascii=False) in json.dumps(l, ensure_ascii=False)
+            ]
+
+            if target_log:
+                xray_trace_id = target_log[0].get("xray_trace_id", {})
+
+                # xray_trace_id가 있는 관련 로그 찾기
+                associated_lambda_logs = [l for l in function_logs if l.get("xray_trace_id") == xray_trace_id]
+
+                # level 값 가져오기
+                levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
+                l_warn_count = 0
+                l_error_count = 0
+                for l in levels:
+                    if l == "ERROR":
+                        l_error_count += 1
+                    elif l == "WARN":
+                        l_warn_count += 1
+                        
+                color = 'tomato' if l_error_count > 0 or l_warn_count > 0 else 'lightgray'
+                lambda_node_footer = ((f"Warn : {l_warn_count}" if l_warn_count > 0 else "") + (f"\nError : {l_error_count}" if l_error_count > 0 else "")) if l_error_count > 0 or l_warn_count > 0 else None
+
+                # 노드 추가
+                dot.node(
+                    f"{xray_trace_id}",
+                    label=get_node_label(
+                        "xray",
+                        get_module_name_ko("xray", log),
+                        f"xray_trace_id : \n{xray_trace_id}",
+                        lambda_node_footer,
+                        log.get("Identifier")
+                    ),
+                    shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
+                    style='rounded,filled',
+                    color=color,
+                    URL=str(json.dumps(associated_lambda_logs, indent=4, ensure_ascii=False))
+                )
+
+                nodes.append(f"{xray_trace_id}")
+                
+                if l_error_count > 0 or l_warn_count:
+                    error_count += 1
+
+        except Exception as e:
+            print(f"Error : {e}")
+
+    return dot, nodes, error_count
 
 # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
 def dup_block_sanitize(node_cache, dot, nodes):
@@ -379,19 +408,24 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
         if any(keyword in log.get('Results', '') for keyword in ERROR_KEYWORDS):
             error_count += 1
 
-        # Lambda 예외 처리
+        # Lambda 예외 처리(result false)
         if is_lambda_error(log):
             error_count += 1
 
+
+
     # 서브 그래프 생성
     if flow_type == "module":
-        sub_dot, _ = build_module_detail(l_logs, l_name,lambda_logs)
+        sub_dot, _, error_count = build_module_detail(l_logs, l_name,lambda_logs,error_count)
         node_title = "InvokeFlowModule"
 
+
     elif flow_type == "flow":
-        sub_dot = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs)
+        sub_dot,error_count = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs,error_count)
         node_title = "TransferToFlow"
 
+
+    
 
     sub_file = f"./virtual_env/{flow_type}_{contact_id}_{l_name}"
     sub_dot.render(sub_file, format="dot", cleanup=True)
@@ -417,10 +451,11 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     return dot, nodes, l_nodes
 
 # Build Dot
-def build_module_detail(logs, module_name,lambda_logs):
+def build_module_detail(logs, module_name,lambda_logs,error_count):
     """
     MOD_로 시작하는 모듈의 세부 정보를 시각화하는 그래프를 생성합니다.
     """
+
     m_dot = Digraph(comment=f"Amazon Connect Module: {module_name}")
     m_dot.attr(rankdir="LR", label=module_name, labelloc="t",fontsize="24")
 
@@ -451,7 +486,7 @@ def build_module_detail(logs, module_name,lambda_logs):
                 node_cache = {}
 
             if module_type not in OMIT_CONTACT_FLOW_MODULE_TYPE:
-                m_dot, nodes = add_block_nodes(module_type, log, is_error, m_dot, nodes, node_id, lambda_logs)
+                m_dot, nodes, error_count = add_block_nodes(module_type, log, is_error, m_dot, nodes, node_id, lambda_logs,error_count)
 
     # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
     # m_dot, nodes = dup_block_sanitize(node_cache, m_dot, nodes)
@@ -460,9 +495,9 @@ def build_module_detail(logs, module_name,lambda_logs):
 
     apply_rank(m_dot, nodes)
 
-    return m_dot, nodes
+    return m_dot, nodes, error_count
 
-def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs):
+def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_count):
     """
     Graphviz를 사용해 Contact Detail 흐름을 시각화하고,
     MOD_로 시작하는 모듈에 대한 세부 그래프를 추가 생성합니다.
@@ -510,7 +545,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs):
                     node_cache = {}
 
                 if module_type not in OMIT_CONTACT_FLOW_MODULE_TYPE:
-                    dot, nodes = add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs)
+                    dot, nodes, error_count = add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs,error_count)
 
     # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
     # dot, nodes = dup_block_sanitize(node_cache, dot, nodes)
@@ -521,7 +556,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs):
     # rank 통일 
     apply_rank(dot, nodes)
 
-    return dot
+    return dot, error_count
 
 def build_main_flow(logs, lambda_logs, contact_id):
     """메인 Contact 흐름을 시각화합니다."""

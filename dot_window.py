@@ -54,5 +54,6 @@ class SubDotModuleWindow(DotWindowBase):
             dialog = Gtk.MessageDialog(parent=self, buttons=Gtk.ButtonsType.OK, message_format=json_text)
             dialog.connect('response', lambda dialog, response: dialog.destroy())
             dialog.run()
+
         except Exception as e:
             print(f"Error showing message dialog: {e}")

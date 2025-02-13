@@ -150,10 +150,18 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
     lambda_logs = {}
 
     for lambda_log_group in lambda_log_groups:
-        lambda_logs[lambda_log_group.split("/")[4]] = fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
+        function_name = lambda_log_group.split("/")[4]
+        lambda_logs[function_name] = fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
+
+    try:
+        if len(lambda_logs['flow-idnv-async-if']) > 0:
+            lambda_logs['flow-idnv-common-if'] += lambda_logs['flow-idnv-async-if']
+    except Exception as e:
+        print(e)
 
     return logs, lambda_logs
 
+# flow-internal-handler
 def get_func_name(arn):
     return "-".join(arn.split(":")[6].split("-")[3:])
 

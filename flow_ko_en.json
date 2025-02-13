@@ -303,5 +303,10 @@
         "en_name": "Wait",
         "ko_name": "대기",
         "ko_desc": "지정된 기간 동안 대기하고 선택적으로 지정된 이벤트에 대해 대기합니다. 이 블록은 채팅 및 태스크에만 지원됩니다."
-    }
+    },
+    {
+        "en_name": "xray",
+        "ko_name": "Lambda 로그 추적",
+        "ko_desc": "해당 AWS Lambda의 X-Ray ID로 실행된 로그를 추적합니다."
+    }  
 ]
