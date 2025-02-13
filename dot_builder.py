@@ -281,12 +281,12 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                 raise TypeError(f"Expected list for function_logs, but got {type(function_logs).__name__}")
 
             contact_id = log.get("ContactId")
-            log_parameters = log.get("Parameters", {}).get("Parameters", {})  # 안전한 접근
+            log_parameters = log.get("Parameters", []).get("Parameters", [])
 
-            # target_log 찾기
+            # target_log 찾기(안찾아지는것이 있어서 방식을 바꾸어야 함)
             target_log = [
                 l for l in function_logs
-                if l.get("ContactId") == contact_id and json.dumps(log_parameters, ensure_ascii=False) in json.dumps(l, ensure_ascii=False)
+                if l.get("ContactId") == contact_id and json.dumps(log_parameters, ensure_ascii=False, sort_keys=True).replace("\n","").replace(" ","") in json.dumps(l, ensure_ascii=False).replace("\n","").replace(" ","")
             ]
 
             if target_log:
@@ -325,7 +325,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                 )
 
                 nodes.append(f"{xray_trace_id}")
-                
+
                 if l_error_count > 0 or l_warn_count:
                     error_count += 1
 
