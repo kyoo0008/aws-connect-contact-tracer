@@ -3,7 +3,8 @@ Contact ID 입력 후 CloudWatch log를 그래프로 구현하는 Utility 입니
 
 ![image](https://github.com/user-attachments/assets/d60d9320-46d7-4767-8e99-17946e8dca47)
 
-![image.png](attachment:52a69e9a-c780-4bff-bcc5-f4cf3a7f371d:image.png)
+![image](https://github.com/user-attachments/assets/3ceeae26-d8ed-46c7-be05-f8be5035f6dd)
+
 
 # Links
 
