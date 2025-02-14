@@ -157,7 +157,10 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
         if len(lambda_logs['flow-idnv-async-if']) > 0:
             lambda_logs['flow-idnv-common-if'] += lambda_logs['flow-idnv-async-if']
     except Exception as e:
-        print(e)
+        print('')
+
+    # with open(f"./virtual_env/lambda_logs_{contact_id}.json", "w", encoding="utf-8") as json_file:
+    #         json.dump(lambda_logs, json_file, ensure_ascii=False, indent=4)
 
     return logs, lambda_logs
 
@@ -301,3 +304,14 @@ def replace_generic_arn(log):
         return value
 
     return replace_arn(log)
+
+# 밀리초 차이 계산
+def calculate_timestamp_gap(t1, t2):
+
+    fmt = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+    dt1 = datetime.strptime(t1, fmt)
+    dt2 = datetime.strptime(t2, fmt)
+
+    millisecond_difference = int((dt1 - dt2).total_seconds() * 1000)
+    return millisecond_difference

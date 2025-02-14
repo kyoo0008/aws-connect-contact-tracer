@@ -1,4 +1,5 @@
 import re
+import sys
 import json
 import time
 import pytz
@@ -15,7 +16,8 @@ from utils import generate_node_ids, \
                     valid_uuid, \
                     wrap_text, \
                     replace_generic_arn, \
-                    get_func_name
+                    get_func_name, \
+                    calculate_timestamp_gap
 from describe_flow import get_comparison_value
 
 # Error 로 인식하는 Results Keyword
@@ -45,14 +47,6 @@ def load_flow_translation(json_path):
 
 flow_translation_map = load_flow_translation("./flow_ko_en.json")
 
-# SVG 파일 내용을 읽어와 문자열로 변환
-def load_svg_content(svg_path):
-    try:
-        with open(svg_path, "r", encoding="utf-8") as f:
-            svg_content = f.read()
-        return svg_content
-    except FileNotFoundError:
-        return "<!-- SVG 파일 없음 -->"
 
 # ✅ Edge 추가 (노드의 index 순서대로)
 def add_edges(dot, nodes):
@@ -271,6 +265,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
     nodes.append(node_id)
 
+    # AWS Lambda Xray trace 추적
     if module_type == "InvokeExternalResource":
         function_name = get_func_name(log.get("Parameters")["FunctionArn"])
         try:
@@ -283,14 +278,43 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
             contact_id = log.get("ContactId")
             log_parameters = log.get("Parameters", []).get("Parameters", [])
 
-            # target_log 찾기(안찾아지는것이 있어서 방식을 바꾸어야 함)
-            target_log = [
+            # target_logs 찾기
+            target_logs = [
                 l for l in function_logs
-                if l.get("ContactId") == contact_id and json.dumps(log_parameters, ensure_ascii=False, sort_keys=True).replace("\n","").replace(" ","") in json.dumps(l, ensure_ascii=False).replace("\n","").replace(" ","")
+                if l.get("ContactId") == contact_id and \
+                json.dumps(log_parameters,
+                    ensure_ascii=False, 
+                    sort_keys=True).replace("\n","").replace(" ","") in json.dumps(l, ensure_ascii=False).replace("\n","").replace(" ","")
             ]
 
-            if target_log:
-                xray_trace_id = target_log[0].get("xray_trace_id", {})
+            target_logs = []
+
+            for l in function_logs:
+                if "parameter" not in l.get("message") or l.get("ContactId") != contact_id:
+                    continue
+
+                log_param = sorted(log_parameters.items())
+                func_param = sorted(l.get("parameters").items())
+
+                if log_param == func_param:
+                    target_logs.append(l)
+
+            min_gap = sys.maxsize
+            xid = ""
+            if len(target_logs) > 1:
+
+                for l in target_logs:
+                    gap = calculate_timestamp_gap(log.get("Timestamp"),l.get("timestamp"))
+                    if min_gap > gap:
+                        min_gap = gap
+                        xid = l.get("xray_trace_id")
+            elif len(target_logs) == 1:
+                xid = target_logs[0].get("xray_trace_id")
+            else:
+                print('no target logs')
+
+            if target_logs:
+                xray_trace_id = xid
 
                 # xray_trace_id가 있는 관련 로그 찾기
                 associated_lambda_logs = [l for l in function_logs if l.get("xray_trace_id") == xray_trace_id]
