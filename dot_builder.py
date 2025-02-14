@@ -266,6 +266,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
     nodes.append(node_id)
 
+    check_log = None
     # AWS Lambda Xray trace 추적
     if module_type == "InvokeExternalResource":
         function_name = get_func_name(log.get("Parameters")["FunctionArn"])
@@ -291,7 +292,8 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
             target_logs = []
 
             for l in function_logs:
-                if "parameter" not in l.get("message") or l.get("ContactId") != contact_id:
+                check_log = l
+                if "parameter" not in l.get("message","") or l.get("ContactId") != contact_id:
                     continue
 
                 log_param = sorted(log_parameters.items())
@@ -337,16 +339,16 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                         node_id = f"{xray_trace_id}_{l.get("timestamp").replace(':', '').replace('.', '')}_{index}"
 
                         node_text = ""
-                        if "parameter" in l.get("message"):
+                        if "parameter" in l.get("message",""):
                             param_json = l.get("parameters",{})
                             for key in param_json:
                                 node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
-                        elif "attribute" in l.get("message"):
+                        elif "attribute" in l.get("message",""):
                             param_json = l.get("attributes",{})
                             for key in param_json:
                                 node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
                         else:
-                            node_text += l.get("message").replace("]","]\n")
+                            node_text += l.get("message","").replace("]","]\n")
 
                         node_title = l.get("level")
                         if l.get("level") == "WARN":
@@ -358,7 +360,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                         # 노드 추가
                         xray_dot.node(
                         node_id,
-                        label=get_node_label(l.get("level"), node_title, wrap_text(node_text,is_just_cut=True,max_length=100),None,l.get("message") if "parameter" in l.get("message") or "attribute" in l.get("message") else " "),
+                        label=get_node_label(l.get("level"), node_title, wrap_text(node_text,is_just_cut=True,max_length=100),None,l.get("message","") if "parameter" in l.get("message","") or "attribute" in l.get("message","") else " "),
                         shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
                         style='rounded,filled',
                         color=color,
@@ -398,7 +400,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                     node_id,
                     label=get_node_label(
                         "xray",
-                        get_module_name_ko("xray", log),
+                        get_module_name_ko("xray", log) + "  ➡️",
                         f"xray_trace_id : \n{xray_trace_id}",
                         lambda_node_footer,
                         log.get("Identifier")
@@ -415,6 +417,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                     error_count += 1
 
         except Exception:
+            print(check_log)
             print(traceback.format_exc())
 
     return dot, nodes, error_count
