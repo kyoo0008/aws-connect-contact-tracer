@@ -735,8 +735,11 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         dot.subgraph(subgraphs[contact_id])
 
         # prev contact id의 마지막 node -> contact id의 첫번째 노드 edge
-        if prev_id and prev_id in subgraphs:    
-            dot.edge(subgraph_nodes[prev_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
+        try:
+            if prev_id and prev_id in subgraphs:    
+                dot.edge(subgraph_nodes[prev_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
+        except Exception:
+            print(traceback.format_exc())
         
     for key, value in root_contact_ids.items():
         if len(subgraph_nodes[key]) > 0:
