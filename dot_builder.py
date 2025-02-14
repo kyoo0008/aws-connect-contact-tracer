@@ -19,6 +19,7 @@ from utils import generate_node_ids, \
                     get_func_name, \
                     calculate_timestamp_gap
 from describe_flow import get_comparison_value
+import traceback
 
 # Error 로 인식하는 Results Keyword
 ERROR_KEYWORDS = [
@@ -218,7 +219,7 @@ def get_node_label(module_type, node_title, node_text, node_footer, block_id):
             <td bgcolor="lightgray" width="150">{node_title}</td>
         </tr>""" if os.path.isfile(icon_path) else f"""<<table border="0" cellborder="0" cellspacing="0">
         <tr>
-            <td bgcolor="lightgray" width="180" fixedsize="true">{node_title}</td>
+            <td bgcolor="lightgray">{node_title}</td>
         </tr>"""
 
     block_id_label = "" if block_id == None or valid_uuid(block_id) else (f"""<tr><td colspan="2">{sanitize_label(block_id)}</td></tr>""" if os.path.isfile(icon_path) else f"""<tr><td>{sanitize_label(block_id)}</td></tr>""")
@@ -302,7 +303,6 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
             min_gap = sys.maxsize
             xid = ""
             if len(target_logs) > 1:
-
                 for l in target_logs:
                     gap = calculate_timestamp_gap(log.get("Timestamp"),l.get("timestamp"))
                     if min_gap > gap:
@@ -319,6 +319,66 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                 # xray_trace_id가 있는 관련 로그 찾기
                 associated_lambda_logs = [l for l in function_logs if l.get("xray_trace_id") == xray_trace_id]
 
+                # print(f"associated_lambda_logs :{associated_lambda_logs}")
+
+                # xray trace dot
+                # associated_lambda_logs = associated_lambda_logs.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
+
+                xray_nodes = []
+                if len(associated_lambda_logs) > 0:
+
+                    xray_dot = Digraph(comment=f"AWS Lambda Xray Trace : {xray_trace_id}")
+                    xray_dot.attr(rankdir="LR", label=f"xray_trace_id : {xray_trace_id}", labelloc="t",fontsize="24")
+                    
+
+                    for index,l in enumerate(associated_lambda_logs):
+
+                        color = 'tomato' if l.get("level") == "ERROR" or l.get("level") == "WARN" else 'lightgray'
+                        node_id = f"{xray_trace_id}_{l.get("timestamp").replace(':', '').replace('.', '')}_{index}"
+
+                        node_text = ""
+                        if "parameter" in l.get("message"):
+                            param_json = l.get("parameters",{})
+                            for key in param_json:
+                                node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
+                        elif "attribute" in l.get("message"):
+                            param_json = l.get("attributes",{})
+                            for key in param_json:
+                                node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
+                        else:
+                            node_text += l.get("message").replace("]","]\n")
+
+                        node_title = l.get("level")
+                        if l.get("level") == "WARN":
+                            node_title = f"⚠️   {l.get("level")}"
+                        elif l.get("level") == "ERROR":
+                            node_title = f"🚨   {l.get("level")}"
+
+
+                        # 노드 추가
+                        xray_dot.node(
+                        node_id,
+                        label=get_node_label(l.get("level"), node_title, wrap_text(node_text,is_just_cut=True,max_length=100),None,l.get("message") if "parameter" in l.get("message") or "attribute" in l.get("message") else " "),
+                        shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
+                        style='rounded,filled',
+                        color=color,
+                        URL=str(json.dumps(l, indent=4, ensure_ascii=False))
+                        ) 
+                        
+                        xray_nodes.append(node_id)
+
+                    xray_dot = add_edges(xray_dot, xray_nodes)
+
+                    if len(xray_nodes) > 0:
+                        apply_rank(xray_dot,xray_nodes)
+
+                    xray_trace_file = f"./virtual_env/xray_trace_{xray_trace_id}"
+                    xray_dot.render(xray_trace_file, format="dot", cleanup=True)
+
+                    
+
+
+
                 # level 값 가져오기
                 levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
                 l_warn_count = 0
@@ -331,10 +391,11 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                         
                 color = 'tomato' if l_error_count > 0 or l_warn_count > 0 else 'lightgray'
                 lambda_node_footer = ((f"Warn : {l_warn_count}" if l_warn_count > 0 else "") + (f"\nError : {l_error_count}" if l_error_count > 0 else "")) if l_error_count > 0 or l_warn_count > 0 else None
+                node_id = f"{log.get("Timestamp").replace(":","").replace(".","")}_{xray_trace_id}"
 
                 # 노드 추가
                 dot.node(
-                    f"{xray_trace_id}",
+                    node_id,
                     label=get_node_label(
                         "xray",
                         get_module_name_ko("xray", log),
@@ -345,16 +406,16 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                     shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
                     style='rounded,filled',
                     color=color,
-                    URL=str(json.dumps(associated_lambda_logs, indent=4, ensure_ascii=False))
+                    URL=f"{xray_trace_file}.dot"
                 )
 
-                nodes.append(f"{xray_trace_id}")
+                nodes.append(node_id)
 
-                if l_error_count > 0 or l_warn_count:
+                if l_error_count > 0 or l_warn_count > 0:
                     error_count += 1
 
-        except Exception as e:
-            print(f"Error : {e}")
+        except Exception:
+            print(traceback.format_exc())
 
     return dot, nodes, error_count
 
@@ -416,10 +477,10 @@ def is_lambda_error(log):
         return False 
 
 # flow 묶음 처리
-def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_id,lambda_logs):
+def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_id,lambda_logs,error_count):
 
     min_timestamp, max_timestamp = None, None
-    error_count = 0
+
     node_title = ""
     for log in l_logs:
         timestamp = datetime.fromisoformat(log['Timestamp'].replace('Z', '+00:00'))
@@ -448,7 +509,6 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
         sub_dot,error_count = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs,error_count)
         node_title = "TransferToFlow"
 
-
     
 
     sub_file = f"./virtual_env/{flow_type}_{contact_id}_{l_name}"
@@ -472,7 +532,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     dot.node(node_id, label=l_label, shape='box', style='rounded,filled', color=l_color, URL=f"{sub_file}.dot")
     nodes.append(node_id)  # 노드가 처음 생성될 때만 추가
 
-    return dot, nodes, l_nodes
+    return dot, nodes, l_nodes, error_count
 
 # Build Dot
 def build_module_detail(logs, module_name,lambda_logs,error_count):
@@ -553,7 +613,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_cou
             if module_name not in module_nodes:  # 처음 등장한 모듈만 생성
                 module_logs = [l for l in logs if l['ContactFlowName'] == module_name]
 
-                dot,nodes,module_nodes = process_sub_flow(flow_type,dot,nodes,module_nodes,module_name,node_id,module_logs,contact_id,lambda_logs)
+                dot,nodes,module_nodes,error_count = process_sub_flow(flow_type,dot,nodes,module_nodes,module_name,node_id,module_logs,contact_id,lambda_logs,error_count)
             else:
                 node_id = module_nodes[module_name]  # 기존 모듈 노드를 참조
         else:
@@ -593,7 +653,7 @@ def build_main_flow(logs, lambda_logs, contact_id):
     flow_nodes = {}
 
     flow_type = "flow"
-
+    
 
     node_info = defaultdict(lambda: {"contact_flow_name":"","subnode": []})
 
@@ -607,10 +667,11 @@ def build_main_flow(logs, lambda_logs, contact_id):
 
 
     for index, node_id in enumerate(node_info.keys()):
+        error_count = 0
 
         info = node_info[node_id]
 
-        main_flow_dot,nodes,flow_nodes = process_sub_flow(flow_type,main_flow_dot,nodes,flow_nodes,info['contact_flow_name'],node_id,info["subnode"],contact_id,lambda_logs)
+        main_flow_dot,nodes,flow_nodes,error_count = process_sub_flow(flow_type,main_flow_dot,nodes,flow_nodes,info['contact_flow_name'],node_id,info["subnode"],contact_id,lambda_logs,error_count)
 
     main_flow_dot = add_edges(main_flow_dot, nodes)
 
