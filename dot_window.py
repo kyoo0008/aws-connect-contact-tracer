@@ -3,7 +3,6 @@ import json
 from gi.repository import Gtk
 
 
-# Dot Window
 class DotWindowBase(xdot.ui.DotWindow):
     """공통 DotWindow 로직을 포함한 기본 클래스"""
     
@@ -14,16 +13,45 @@ class DotWindowBase(xdot.ui.DotWindow):
         self.open_file(self.dot_file)
 
     def on_delete_event(self, widget, event):
-        print("Window closed")
+        print("창이 닫혔습니다.")
         self.hide()
         return True
+
+
+class TextViewDialog(Gtk.Window):
+    """스크롤 가능한 텍스트 뷰어 창"""
+
+    def __init__(self, title, text):
+        super().__init__(title=title)
+        self.set_default_size(500, 800)
+        self.set_position(Gtk.WindowPosition.CENTER)
+
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        vbox.set_border_width(10)
+
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        
+        text_view = Gtk.TextView()
+        text_view.set_editable(False)
+        text_view.set_wrap_mode(Gtk.WrapMode.WORD)
+        text_buffer = text_view.get_buffer()
+        text_buffer.set_text(text)
+
+        scrolled_window.add(text_view)
+        vbox.pack_start(scrolled_window, True, True, 0)
+
+        self.add(vbox)
+        self.show_all()
+
 
 class MainDotWindow(DotWindowBase):
     """메인 Contact Flow 그래프를 표시하는 창"""
 
     def on_node_clicked(self, widget, sub_file, event):
-        print(f"Opening sub flow: {sub_file}")
+        print(f"서브 플로우 열기: {sub_file}")
         SubDotWindow(sub_file)
+
 
 class SubDotWindow(DotWindowBase):
     """서브 Contact Flow 그래프를 표시하는 창"""
@@ -32,49 +60,41 @@ class SubDotWindow(DotWindowBase):
         try:
             json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
             if json_text.startswith('./virtual_env/module_'):
-                print(f"Opening sub flow: {json_data}")
+                print(f"서브 플로우 열기: {json_data}")
                 SubDotModuleWindow(json_data)
             elif json_text.startswith('./virtual_env/xray'):
-                print(f"Opening sub flow: {json_data}")
+                print(f"서브 플로우 열기: {json_data}")
                 SubDotXrayWindow(json_data)
             else:
-                print(f"Node clicked: \n{json_text}")
-
-                dialog = Gtk.MessageDialog(parent=self, buttons=Gtk.ButtonsType.OK, message_format=json_text)
-                dialog.connect('response', lambda dialog, response: dialog.destroy())
-                dialog.run()
+                print(f"노드 클릭됨: \n{json_text}")
+                TextViewDialog("노드 정보", json_text)
         except Exception as e:
-            print(f"Error showing SubDotWindow : {e}")
+            print(f"SubDotWindow 표시 오류: {e}")
+
 
 class SubDotModuleWindow(DotWindowBase):
-    """서브 Contact Flow 그래프를 표시하는 창"""
+    """모듈 서브 Contact Flow 그래프를 표시하는 창"""
 
     def on_node_clicked(self, widget, json_data, event):
         try:
             json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
             if json_text.startswith('./virtual_env/xray'):
-                print(f"Opening sub flow: {json_data}")
+                print(f"서브 플로우 열기: {json_data}")
                 SubDotXrayWindow(json_data)
             else:
-                json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
-                print(f"Node clicked: \n{json_text}")
-
-                dialog = Gtk.MessageDialog(parent=self, buttons=Gtk.ButtonsType.OK, message_format=json_text)
-                dialog.connect('response', lambda dialog, response: dialog.destroy())
-                dialog.run()
-
+                print(f"노드 클릭됨: \n{json_text}")
+                TextViewDialog("노드 정보", json_text)
         except Exception as e:
-            print(f"Error showing SubDotModuleWindow: {e}")
+            print(f"SubDotModuleWindow 표시 오류: {e}")
+
 
 class SubDotXrayWindow(DotWindowBase):
+    """X-Ray 서브 Contact Flow 그래프를 표시하는 창"""
+
     def on_node_clicked(self, widget, json_data, event):
-        json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
         try:
             json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
-            print(f"Node clicked: \n{json_text}")    
-
-            dialog = Gtk.MessageDialog(parent=self, buttons=Gtk.ButtonsType.OK, message_format=json_text)
-            dialog.connect('response', lambda dialog, response: dialog.destroy())
-            dialog.run()
+            print(f"노드 클릭됨: \n{json_text}")    
+            TextViewDialog("노드 정보", json_text)
         except Exception as e:
-            print(f"Error showing SubDotXrayWindow : {e}")
+            print(f"SubDotXrayWindow 표시 오류: {e}")

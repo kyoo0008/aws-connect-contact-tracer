@@ -155,7 +155,7 @@ def get_node_text_by_module_type(module_type,log,block_id):
             node_text += wrap_text(param_str)
 
         if replaced_arn_log.get('Results'):
-            node_footer = "Results : " + replaced_arn_log.get('Results')
+            node_footer = "Results : " + wrap_text(replaced_arn_log.get('Results'),is_just_cut=True,max_length=20)
     elif module_type == "TagContact":
                 
         # Param 존재 시 
