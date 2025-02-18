@@ -248,6 +248,7 @@ case $search_option in
     fi
     ;;
   "LambdaError")
+    echo "⏳ 탐색 중 입니다..."
     contact_ids=$(list_contact_flow_lambda_error_list)
     if [ -z "$contact_ids" ]; then
       echo "❌ 저장된 Contact Flow 기록이 없습니다."
