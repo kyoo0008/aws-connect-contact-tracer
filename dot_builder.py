@@ -539,7 +539,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
 
     
 
-    sub_file = f"./virtual_env/{flow_type}_{contact_id}_{l_name}"
+    sub_file = f"./virtual_env/{flow_type}_{contact_id}_{node_id}"
     sub_dot.render(sub_file, format="dot", cleanup=True)
 
     # ✅ MOD_ 모듈 노드의 label 구성 (build_main_flow와 동일한 형식)
