@@ -530,6 +530,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     if flow_type == "module":
         sub_dot, _, module_error_count = build_module_detail(l_logs, l_name,lambda_logs,module_error_count)
         node_title = "InvokeFlowModule"
+        error_count += module_error_count
 
 
     elif flow_type == "flow":

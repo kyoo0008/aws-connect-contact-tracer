@@ -14,6 +14,13 @@ EMAIL_REGEX="^[a-zA-Z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-zA-Z0-9!#$%&'*+/=?^_\`{|}~-
 UUID_REGEX=^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$
 cols_num=5
 
+
+# Insights 쿼리
+QUERY='fields @timestamp, @message, @logStream, @log
+| filter @message like "\"level\":\"ERROR\""
+| sort @timestamp desc
+| limit 10000'
+
 if [ ! -d "$VENV_DIR" ]; then
   python3 -m venv "$VENV_DIR"
   echo -e "\n\"$VENV_DIR\" Python 가상환경이 생성되었습니다.\n"
@@ -87,6 +94,73 @@ list_history_files() {
     done
 }
 
+list_contact_flow_lambda_error_list() {
+  # 로그 그룹 배열 (필요한 로그 그룹을 추가하세요)
+  LOG_GROUPS=(
+      "/aws/lmd/aicc-connect-flow-base/flow-agent-workspace-handler"
+      "/aws/lmd/aicc-connect-flow-base/flow-alms-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-chat-app"
+      "/aws/lmd/aicc-connect-flow-base/flow-idnv-async-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-idnv-common-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-internal-handler"
+      "/aws/lmd/aicc-connect-flow-base/flow-kalis-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-mdm-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-ods-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-oneid-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-sample-integration"
+      "/aws/lmd/aicc-connect-flow-base/flow-tms-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-vars-controller"
+  )
+
+  # Insights 쿼리
+  QUERY="fields @timestamp, @message, @logStream, @log
+  | filter @message like '\"level\":\"ERROR\"'
+  | sort @timestamp desc
+  | limit 10000"
+
+
+  # 실행 결과를 저장할 변수
+  RESULTS=""
+
+  # 각 로그 그룹에 대해 쿼리 실행
+  for LOG_GROUP in "${LOG_GROUPS[@]}"; do
+
+      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+      
+      # 쿼리 실행 후 대기 (CloudWatch는 쿼리가 실행되는 데 시간이 필요함)
+      while true; do
+          STATUS=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+          if [ "$STATUS" == "Complete" ]; then
+              break
+          fi
+          sleep 2
+      done
+
+
+      # 결과 가져오기
+      RESPONSE=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --output json)
+
+      # JSON에서 ContactId 추출
+      CONTACT_INFO=$(echo "$RESPONSE" | jq -r '
+          .results[] | 
+          {
+              timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
+              message: (map(select(.field == "@message"))[0].value | fromjson)
+          } |
+          select(.message.ContactId) |
+          "\(.message.ContactId)\t\(.message.service)\t\(.timestamp)"
+      ')
+
+      if [ ! -z "$CONTACT_INFO" ]; then
+        echo $CONTACT_INFO
+      fi
+  done
+
+  
+
+
+}
+
 # Amazon Connect Instance ID
 instance_id=$(get_instance_id_from_alias "$instance_alias")
 if [ -z "$instance_id" ]; then
@@ -106,7 +180,7 @@ fi
 # fzf를 통한 검색 조건 선택
 
 
-search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory" | fzf --height 6 --prompt "검색할 기준을 선택하세요 (History, Agent, Customer, ContactId):" )
+search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError" | fzf --height 7 --prompt "검색할 기준을 선택하세요 (History, Agent, Customer, ContactId):" )
 
 case $search_option in
   "History")
@@ -172,6 +246,15 @@ case $search_option in
       echo "❌ 오류: 유효한 Contact ID (UUID)를 입력하세요."
       exit 1
     fi
+    ;;
+  "LambdaError")
+    contact_ids=$(list_contact_flow_lambda_error_list)
+    if [ -z "$contact_ids" ]; then
+      echo "❌ 저장된 Contact Flow 기록이 없습니다."
+      exit 1
+    fi
+
+    selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
     ;;
   *)
     echo "올바른 옵션을 선택하세요."
