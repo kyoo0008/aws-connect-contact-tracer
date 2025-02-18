@@ -152,7 +152,7 @@ list_contact_flow_lambda_error_list() {
       ')
 
       if [ ! -z "$CONTACT_INFO" ]; then
-        echo $CONTACT_INFO
+        echo "$CONTACT_INFO"$'\n'
       fi
   done
 

@@ -31,7 +31,7 @@ def generate_node_ids(logs):
     for log in logs:
         flow_name = log['ContactFlowName']
 
-        if last_flow_name and (flow_name.startswith("MOD_") or flow_name == last_flow_name):
+        if last_flow_name and ((flow_name.startswith("MOD_") or flow_name.startswith("99_MOD_")) or flow_name == last_flow_name):
             # MOD_ 또는 이전과 동일한 Entry라면 같은 node_id 유지
             log['node_id'] = last_node_id
         else:

@@ -646,7 +646,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_cou
         parameters = log.get('Parameters', {})
 
         # ✅ 중복 모듈 타입이면 기존 노드에 parameter를 추가
-        if log['ContactFlowName'].startswith("MOD_"):
+        if log['ContactFlowName'].startswith("MOD_") or log['ContactFlowName'].startswith("99_MOD_"):
             module_name = log['ContactFlowName']
 
             if module_name not in module_nodes:  # 처음 등장한 모듈만 생성
@@ -699,7 +699,7 @@ def build_main_flow(logs, lambda_logs, contact_id):
     for log in logs:
         node_id = f"{contact_id}_{log['node_id']}"
 
-        if not log['ContactFlowName'].startswith('MOD_'):
+        if not log['ContactFlowName'].startswith('MOD_') and not log['ContactFlowName'].startswith("99_MOD_"):
             node_info[node_id]["contact_flow_name"] = log['ContactFlowName']
 
         node_info[node_id]["subnode"].append(log)
