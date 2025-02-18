@@ -290,21 +290,42 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
             ]
 
             target_logs = []
+            
 
             for l in function_logs:
                 check_log = l
-                if "parameter" not in l.get("message","") or l.get("ContactId") != contact_id:
-                    continue
+                if l.get("ContactId") == contact_id:
+                    if "parameter" in l.get("message","") :
+                        func_param = json.dumps(l.get("parameters"),sort_keys=True)
+                        log_param = json.dumps(log_parameters,sort_keys=True)
+                        func_param = func_param.replace("id&v","idnv") # idnv 예외 처리
+                        log_param = log_param.replace("id&v","idnv")
 
-                log_param = sorted(log_parameters.items())
-                func_param = sorted(l.get("parameters").items())
+                        if log_param == func_param:
+                            target_logs.append(l)
+                    elif "Event" in l.get("message",""): # vars config 예외 처리 
+                        
+                        func_param = {}
+                        log_param = sorted(log_parameters.items())
 
-                if log_param == func_param:
-                    target_logs.append(l)
+                        func_param = l["event"]["Details"]["Parameters"]
+                        log_param = log_parameters
+
+                        if None != func_param.get('varsConfig') and None != log_param.get('varsConfig'):
+                            del func_param['varsConfig']
+                            del log_param['varsConfig']
+
+                        func_param = json.dumps(func_param,sort_keys=True)
+                        log_param = json.dumps(log_param,sort_keys=True)
+                        
+                        if log_param == func_param:
+                            target_logs.append(l)
+                        
+                    
 
             min_gap = sys.maxsize
             xid = ""
-            if len(target_logs) > 1:
+            if len(target_logs) > 1: # 2개 이상인 경우 가장 가까운 timstamp 차이 계산 
                 for l in target_logs:
                     gap = calculate_timestamp_gap(log.get("Timestamp"),l.get("timestamp"))
                     if min_gap > gap:
@@ -313,7 +334,9 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
             elif len(target_logs) == 1:
                 xid = target_logs[0].get("xray_trace_id")
             else:
-                print('no target logs')
+                print(f"===no target logs=== : {log}")
+                # print("===no target logs===")
+                
 
             if target_logs:
                 xray_trace_id = xid
@@ -483,6 +506,7 @@ def is_lambda_error(log):
 def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_id,lambda_logs,error_count):
 
     min_timestamp, max_timestamp = None, None
+    module_error_count = 0
 
     node_title = ""
     for log in l_logs:
@@ -504,7 +528,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
 
     # 서브 그래프 생성
     if flow_type == "module":
-        sub_dot, _, error_count = build_module_detail(l_logs, l_name,lambda_logs,error_count)
+        sub_dot, _, module_error_count = build_module_detail(l_logs, l_name,lambda_logs,module_error_count)
         node_title = "InvokeFlowModule"
 
 
@@ -522,13 +546,24 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     # 모듈 노드 저장 (중복 생성 방지)
     l_nodes[l_name] = node_id
 
-    l_color = 'tomato' if error_count > 0 else 'lightgray'
+    l_color = ""
+
+    if flow_type == "module":
+        l_color = 'tomato' if module_error_count > 0 else 'lightgray'
+    elif flow_type == "flow":
+        l_color = 'tomato' if error_count > 0 else 'lightgray'
+
+    error_count_text = ""
+    if flow_type == "module":
+        error_count_text = f"Errors: {module_error_count}" if module_error_count > 0 else ""
+    elif flow_type == "flow":
+        error_count_text = f"Errors: {error_count}" if error_count > 0 else ""
 
     l_label = get_node_label(
         node_title,
         f"{l_name}  ➡️",
         f"{str(min_timestamp).replace('000+00:00', '')} ~ \n{str(max_timestamp).replace('000+00:00', '')}",
-        (f"Nodes : {len(l_logs)}\n") + (f"Errors: {error_count}" if error_count > 0 else ""),
+        (f"Nodes : {len(l_logs)}\n") + error_count_text,
         None)
 
 

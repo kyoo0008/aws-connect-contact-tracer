@@ -3,6 +3,9 @@
 # Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 # 가상 환경 및 AWS SSO, Amazon Connect 설정을 수행하는 PowerShell 스크립트
+# Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+# ./script.ps1
+
 
 $VENV_DIR = "virtual_env"
 $PYTHON_SCRIPT_FILE = "main.py"
