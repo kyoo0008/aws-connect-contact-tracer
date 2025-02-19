@@ -5,6 +5,7 @@ import time
 import pytz
 import boto3
 import os
+import subprocess
 
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -233,6 +234,34 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
         #     json.dump(logs, json_file, ensure_ascii=False, indent=4)
 
         # print(f"JSON 파일이 저장되었습니다: {output_json_path}")
+
+
+def get_xray_trace(trace_id, region="ap-northeast-2"):
+    # AWS CLI 명령어 실행
+    cmd = [
+        "aws", "xray", "batch-get-traces",
+        "--trace-ids", trace_id,
+        "--region", region,
+        "--output", "json"
+    ]
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    
+    if result.returncode != 0:
+        return {"error": "Failed to retrieve trace", "details": result.stderr}
+
+    # JSON 파싱
+    try:
+        data = json.loads(result.stdout)
+        dynamodb_traces = [
+            json.loads(segment["Document"])
+            for trace in data.get("Traces", [])
+            for segment in trace.get("Segments", [])
+            if "Document" in segment and "DynamoDB" in json.loads(segment["Document"]).get("name", "")
+        ]
+        return dynamodb_traces
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON response from AWS CLI"}
 
 
 def wrap_text(text, is_just_cut=False, max_length=72, wrap_at=25):

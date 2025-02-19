@@ -306,7 +306,7 @@
     },
     {
         "en_name": "xray",
-        "ko_name": "Lambda 로그 추적",
+        "ko_name": "X-Ray Lambda 로그 추적",
         "ko_desc": "해당 AWS Lambda의 X-Ray ID로 실행된 로그를 추적합니다."
     }  
 ]

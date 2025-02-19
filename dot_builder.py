@@ -17,7 +17,8 @@ from utils import generate_node_ids, \
                     wrap_text, \
                     replace_generic_arn, \
                     get_func_name, \
-                    calculate_timestamp_gap
+                    calculate_timestamp_gap, \
+                    get_xray_trace
 from describe_flow import get_comparison_value
 import traceback
 
@@ -210,6 +211,11 @@ def get_node_label(module_type, node_title, node_text, node_footer, block_id):
     node_text = str(node_text).replace(">","＞").replace("<","＜").replace("\n","<br/>")
 
     node_footer = str(node_footer).replace(">","＞").replace("<","＜").replace("\n","<br/>")
+
+    if "false" in node_footer or "Fail" in node_footer:
+        node_footer += " ❌"
+    elif "true" in node_footer or "Success" in node_footer:
+        node_footer += " ✅"
     
 
     # 상단 구역 (아이콘 + 한글명), 하단 구역 parameter
@@ -338,8 +344,23 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                 # print("===no target logs===")
                 
 
-            if target_logs:
+            if target_logs: # x-ray 추적 처리 
                 xray_trace_id = xid
+
+                # To-do : xray response
+                xray_trace = get_xray_trace(xray_trace_id)
+                xray_text = ""
+                if len(xray_trace) > 0:
+                    # print(f"xray_trace : {xray_trace}")
+                    last_op = None
+                    index = 1
+                    for t in xray_trace:
+                        op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
+                        if op != last_op:
+                            xray_text += f"Operation {index} : \n" + op
+                            last_op = op
+                            index += 1
+
 
                 # xray_trace_id가 있는 관련 로그 찾기
                 associated_lambda_logs = [l for l in function_logs if l.get("xray_trace_id") == xray_trace_id]
@@ -400,10 +421,6 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                     xray_trace_file = f"./virtual_env/xray_trace_{xray_trace_id}"
                     xray_dot.render(xray_trace_file, format="dot", cleanup=True)
 
-                    
-
-
-
                 # level 값 가져오기
                 levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
                 l_warn_count = 0
@@ -424,9 +441,9 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                     label=get_node_label(
                         "xray",
                         get_module_name_ko("xray", log) + "  ➡️",
-                        f"xray_trace_id : \n{xray_trace_id}",
+                        xray_text,
                         lambda_node_footer,
-                        log.get("Identifier")
+                        xray_trace_id
                     ),
                     shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
                     style='rounded,filled',
