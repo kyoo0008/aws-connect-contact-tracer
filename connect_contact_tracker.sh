@@ -12,6 +12,7 @@ PYTHON_SCRIPT_FILE="main.py"
 REQUIREMENTS_FILE="requirements.txt"
 EMAIL_REGEX="^[a-zA-Z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-zA-Z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\$"
 UUID_REGEX=^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$
+HANGUL_NAME_REGEX="^[가-힣]{2,}[a-zA-Z]?$"  # 한글 두 글자 이상 + 선택적 영문자
 cols_num=5
 
 
@@ -195,7 +196,8 @@ case $search_option in
     selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
     ;;
   "Agent")
-    echo -e "Agent ID 또는 Name을 입력하세요:(e.g., 상담사 uuid 또는 이메일 형식의 ID)"
+    echo -e "Agent ID, 한글이름, 또는 Email을 입력하세요:(e.g., 상담사 uuid, 홍길동B, 또는 이메일 형식의 ID)"
+    # echo -e "Agent ID 또는 Email 입력 시 빠르게 검색할 수 있습니다."
     read -r -p "❯ " agent_input
     echo "입력된 Agent 정보: $agent_input"
 
@@ -203,6 +205,19 @@ case $search_option in
       agent_id=$(aws connect describe-user --instance-id $instance_id --user-id $agent_input | jq -r '.User.Username')
     elif [[ $agent_input =~ $EMAIL_REGEX ]]; then
       agent_id=$agent_input
+    elif [[ $agent_input =~ $HANGUL_NAME_REGEX ]]; then  # 한글 Full Name 입력
+      echo "🔍 한글 Full Name 검색 중..."
+
+      # 전체 상담사 목록에서 검색
+      agent_id=$(aws connect search-users --instance-id $instance_id --output json | \
+          jq -r --arg name "$agent_input" '
+          .Users[] | select((.IdentityInfo.LastName+.IdentityInfo.FirstName) == $name) | .Username'
+      )
+
+      if [[ -z "$agent_id" ]]; then
+          echo "❌ 오류: 해당 Full Name을 가진 상담사를 찾을 수 없습니다."
+          exit 1
+      fi
     else
       echo "❌ 오류: 유효한 Agent ID (UUID) 또는 이메일 형식의 ID를 입력하세요."
       exit 1
