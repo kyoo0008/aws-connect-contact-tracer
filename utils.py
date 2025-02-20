@@ -142,12 +142,12 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
             jsonfile_name = f"./virtual_env/describe_contact_flow_{contact_flow_id}.json"
 
             if not os.path.isfile(jsonfile_name):
-                get_contact_flow(contact_flow_id)
+                get_contact_flow(contact_flow_id, region)
         elif 'flow-module' in contact_flow_id:
             jsonfile_name = f"./virtual_env/describe_flow_module_{contact_flow_id}.json"
 
             if not os.path.isfile(jsonfile_name):
-                get_contact_flow_module(contact_flow_id)
+                get_contact_flow_module(contact_flow_id, region)
 
     lambda_logs = {}
 

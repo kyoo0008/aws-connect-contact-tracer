@@ -33,13 +33,13 @@ def save_json(data, filename):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def get_contact_flow(flow_arn):
+def get_contact_flow(flow_arn,region):
     """AWS Connect Contact Flow 정보를 가져와 JSON 파일로 저장"""
     instance_id, entity_type, flow_id = extract_ids_from_arn(flow_arn)
     if not instance_id or entity_type != "contact-flow" or not flow_id:
         raise ValueError(f"Invalid Contact Flow ARN : {flow_arn}")
 
-    client = boto3.client("connect")
+    client = boto3.client("connect", region_name=region)
 
     response = client.describe_contact_flow(
         InstanceId=instance_id,
@@ -51,13 +51,13 @@ def get_contact_flow(flow_arn):
     content = json.loads(response["ContactFlow"]["Content"])
     save_json(content, jsonfile_name)
 
-def get_contact_flow_module(flow_module_arn):
+def get_contact_flow_module(flow_module_arn,region):
     """AWS Connect Contact Flow Module 정보를 가져와 JSON 파일로 저장"""
     instance_id, entity_type, flow_module_id = extract_ids_from_arn(flow_module_arn)
     if not instance_id or entity_type != "flow-module" or not flow_module_id:
         raise ValueError(f"Invalid Contact Flow Module ARN : {flow_module_arn}")
 
-    client = boto3.client("connect")
+    client = boto3.client("connect", region_name=region)
 
     response = client.describe_contact_flow_module(
         InstanceId=instance_id,
