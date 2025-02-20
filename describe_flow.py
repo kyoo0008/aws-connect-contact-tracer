@@ -69,22 +69,33 @@ def get_contact_flow_module(flow_module_arn):
     content = json.loads(response["ContactFlowModule"]["Content"])
     save_json(content, jsonfile_name)
 
-def get_comparison_value(flow_module_arn,block_id):
+def get_comparison_value(flow_module_arn,block_id,is_second_value):
     instance_id, entity_type, flow_id = extract_ids_from_arn(flow_module_arn)
 
     jsonfile_name = f"./virtual_env/describe_{entity_type}_{flow_id}.json"
 
     target_block = None
 
-    with open(jsonfile_name, encoding="utf-8") as file:
-        src = json.load(file)
-        target_block = [action for action in src["Actions"] if action["Identifier"] == block_id]
+    if not is_second_value:
+        with open(jsonfile_name, encoding="utf-8") as file:
+            src = json.load(file)
+            target_block = [action for action in src["Actions"] if action["Identifier"] == block_id]
 
-    if target_block:
+        if target_block:
 
-        return target_block[0]["Parameters"].get("ComparisonValue")
+            return target_block[0]["Parameters"].get("ComparisonValue")
+        else:
+            return None
     else:
-        return None
+        with open(jsonfile_name, encoding="utf-8") as file:
+            src = json.load(file)
+            target_block = [action for action in src["Actions"] if action["Identifier"] == block_id]
+
+        if target_block:
+            target_value = target_block[0]["Transitions"]["Conditions"][0]["Condition"]["Operands"][0]
+            return target_value if "$" in target_value else None
+        else:
+            return None
 
 
 

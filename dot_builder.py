@@ -107,7 +107,8 @@ def get_node_text_by_module_type(module_type,log,block_id):
 
 
         if log.get("ContactFlowId") and block_id:
-            comparison_value = get_comparison_value(log.get("ContactFlowId"),block_id)
+            comparison_value = get_comparison_value(log.get("ContactFlowId"),block_id,False)
+            comparison_second_value = get_comparison_value(log.get("ContactFlowId"),block_id,True)
 
         operand = ""
         if op == "Contains":
@@ -128,6 +129,8 @@ def get_node_text_by_module_type(module_type,log,block_id):
             node_text = "Invalid Operator" 
 
         value = f"{value}"+ (f"({comparison_value})" if comparison_value else "")
+
+        second_value = f"{second_value}"+ (f"({comparison_second_value})" if comparison_second_value else "")
 
         is_too_long = len(str(value)+str(second_value)) > 30
 
@@ -154,6 +157,10 @@ def get_node_text_by_module_type(module_type,log,block_id):
         param_str = param_json.get("Text")
         if param_str: 
             node_text += wrap_text(param_str)
+        elif param_json.get("PromptSource"):
+            prompt_wav = param_json.get("PromptLocation")
+            node_text += f"음원재생 : \n {prompt_wav.split("/")[-2]+"/"+prompt_wav.split("/")[-1]}"
+        
 
         if replaced_arn_log.get('Results'):
             node_footer = "Results : " + wrap_text(replaced_arn_log.get('Results'),is_just_cut=True,max_length=20)
