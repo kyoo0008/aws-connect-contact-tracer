@@ -149,10 +149,11 @@ def get_node_text_by_module_type(module_type,log,block_id):
                 node_text += f"{wrap_text(f"{key} = {parameters[key]}",is_just_cut=True,max_length=25)} \n"
 
         if replaced_arn_log.get("ExternalResults"):
-            node_footer = "ExternalResults : " + wrap_text(
-                json.dumps(replaced_arn_log.get("ExternalResults"), indent=2, ensure_ascii=False),
-                is_just_cut=True,
-                max_length=30)
+            node_footer = "ExternalResults : " + json.dumps(replaced_arn_log.get("ExternalResults",""), indent=2, ensure_ascii=False)
+            # wrap_text(
+            #     json.dumps(replaced_arn_log.get("ExternalResults"), indent=2, ensure_ascii=False),
+            #     is_just_cut=True,
+            #     max_length=30)
     elif module_type == "PlayPrompt" or module_type == "GetUserInput" or module_type == "StoreUserInput":
         param_str = param_json.get("Text")
         if param_str: 
@@ -219,10 +220,21 @@ def get_node_label(module_type, node_title, node_text, node_footer, block_id):
 
     node_footer = str(node_footer).replace(">","＞").replace("<","＜").replace("\n","<br/>")
 
-    if "false" in node_footer or "Fail" in node_footer:
-        node_footer += " ❌"
-    elif "true" in node_footer or "Success" in node_footer:
-        node_footer += " ✅"
+    if node_footer.startswith("ExternalResults"):
+        if "\"isSuccess\": \"true\"" in node_footer:
+            node_footer = "isSuccess: true ✅"
+        elif "\"isSuccess\": \"false\"" in node_footer:
+            node_footer = "isSuccess: false ❌"
+        else:
+            node_footer = wrap_text(
+                node_footer,
+                is_just_cut=True,
+                max_length=30)
+    else:
+        if "false" in node_footer or "Fail" in node_footer:
+            node_footer += " ❌"
+        elif "true" in node_footer or "Success" in node_footer:
+            node_footer += " ✅"
     
 
     # 상단 구역 (아이콘 + 한글명), 하단 구역 parameter
@@ -670,7 +682,8 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_cou
         parameters = log.get('Parameters', {})
 
         # ✅ 중복 모듈 타입이면 기존 노드에 parameter를 추가
-        if log['ContactFlowName'].startswith("MOD_") or log['ContactFlowName'].startswith("99_MOD_"):
+        # if log['ContactFlowName'].startswith("MOD_") or log['ContactFlowName'].startswith("99_MOD_"):
+        if "MOD_" in log['ContactFlowName']:
             module_name = log['ContactFlowName']
 
             if module_name not in module_nodes:  # 처음 등장한 모듈만 생성
@@ -723,7 +736,8 @@ def build_main_flow(logs, lambda_logs, contact_id):
     for log in logs:
         node_id = f"{contact_id}_{log['node_id']}"
 
-        if not log['ContactFlowName'].startswith('MOD_') and not log['ContactFlowName'].startswith("99_MOD_"):
+        # if not log['ContactFlowName'].startswith('MOD_') and not log['ContactFlowName'].startswith("99_MOD_"):
+        if "MOD_" not in log['ContactFlowName']:
             node_info[node_id]["contact_flow_name"] = log['ContactFlowName']
 
         node_info[node_id]["subnode"].append(log)
