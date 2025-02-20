@@ -26,7 +26,8 @@ import traceback
 ERROR_KEYWORDS = [
     'Error', 'Failed', 'Timeout', 'Exception', 'No prompt provided',
     'Instance has reached concurrent Lambda thread access limit',
-    'Unsupported', 'Invalid', 'not found', 'NotDone', 'MultipleFound'
+    'Unsupported', 'Invalid', 'not found', 'NotDone', 'MultipleFound',
+    'The Lambda Function Returned An Error.'
 ]
 
 # 반복되는 Flow Block 중복 제거 
@@ -154,6 +155,8 @@ def get_node_text_by_module_type(module_type,log,block_id):
             #     json.dumps(replaced_arn_log.get("ExternalResults"), indent=2, ensure_ascii=False),
             #     is_just_cut=True,
             #     max_length=30)
+        else:
+            node_footer += replaced_arn_log.get("Results")
     elif module_type == "PlayPrompt" or module_type == "GetUserInput" or module_type == "StoreUserInput":
         param_str = param_json.get("Text")
         if param_str: 
@@ -374,11 +377,12 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                     last_op = None
                     index = 1
                     for t in xray_trace:
-                        op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
-                        if op != last_op:
-                            xray_text += f"Operation {index} : \n" + op
-                            last_op = op
-                            index += 1
+                        if t.get("aws"):
+                            op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
+                            if op != last_op:
+                                xray_text += f"Operation {index} : \n" + op
+                                last_op = op
+                                index += 1
 
 
                 # xray_trace_id가 있는 관련 로그 찾기
@@ -610,7 +614,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     return dot, nodes, l_nodes, error_count
 
 # Build Dot
-def build_module_detail(logs, module_name,lambda_logs,error_count):
+def build_module_detail(logs, module_name,lambda_logs,module_error_count):
     """
     MOD_로 시작하는 모듈의 세부 정보를 시각화하는 그래프를 생성합니다.
     """
@@ -629,6 +633,8 @@ def build_module_detail(logs, module_name,lambda_logs,error_count):
     last_module_type = ""
     for index, log in enumerate(logs):
         is_error = any(keyword in log.get('Results', '') for keyword in ERROR_KEYWORDS) or is_lambda_error(log)
+        if is_error:
+            module_error_count += 1 
         node_id = f"{log['Timestamp'].replace(':', '').replace('.', '')}_{index}"
         module_type = log.get('ContactFlowModuleType')
         
@@ -645,7 +651,7 @@ def build_module_detail(logs, module_name,lambda_logs,error_count):
                 node_cache = {}
 
             if module_type not in OMIT_CONTACT_FLOW_MODULE_TYPE:
-                m_dot, nodes, error_count = add_block_nodes(module_type, log, is_error, m_dot, nodes, node_id, lambda_logs,error_count)
+                m_dot, nodes, module_error_count = add_block_nodes(module_type, log, is_error, m_dot, nodes, node_id, lambda_logs,module_error_count)
 
     # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
     # m_dot, nodes = dup_block_sanitize(node_cache, m_dot, nodes)
@@ -654,7 +660,7 @@ def build_module_detail(logs, module_name,lambda_logs,error_count):
 
     apply_rank(m_dot, nodes)
 
-    return m_dot, nodes, error_count
+    return m_dot, nodes, module_error_count
 
 def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_count):
     """

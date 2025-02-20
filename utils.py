@@ -227,7 +227,7 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
                     json_value = json.loads(field["value"])
                     logs.append(json_value)
 
-    return logs
+    
 
         # JSON 파일 저장    
         # output_json_path = f"./virtual_env/{log_group.split("/")[4]}_{contact_id}.json"
@@ -236,6 +236,7 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
 
         # print(f"JSON 파일이 저장되었습니다: {output_json_path}")
 
+    return logs
 
 def get_xray_trace(trace_id, region="ap-northeast-2"):
     # AWS CLI 명령어 실행
