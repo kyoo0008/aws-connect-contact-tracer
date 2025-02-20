@@ -15,6 +15,21 @@
         "ko_desc": "사례를 가져오거나 업데이트하거나 생성합니다."
     },
     {
+        "en_name": "CreateCase",
+        "ko_name": "사례",
+        "ko_desc": "사례를 가져오거나 업데이트하거나 생성합니다."
+    },
+    {
+        "en_name": "GetCase",
+        "ko_name": "사례",
+        "ko_desc": "사례를 가져오거나 업데이트하거나 생성합니다."
+    },
+    {
+        "en_name": "UpdateCase",
+        "ko_name": "사례",
+        "ko_desc": "사례를 가져오거나 업데이트하거나 생성합니다."
+    },
+    {
         "en_name": "ChangeRoutingPriority",
         "ko_name": "라우팅 우선순위/수명 변경",
         "ko_desc": "대기열에서 연락처의 우선순위 또는 수명을 변경합니다."
