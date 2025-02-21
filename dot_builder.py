@@ -160,7 +160,14 @@ def get_node_text_by_module_type(module_type,log,block_id):
     elif module_type == "PlayPrompt" or module_type == "GetUserInput" or module_type == "StoreUserInput":
         param_str = param_json.get("Text")
         if param_str: 
-            node_text += wrap_text(param_str) if "\n" not in param_str else param_str
+            param_str = param_str.replace(",",",\n").replace(".",".\n") 
+            for line in param_str.split("\n"):
+                if len(line) > 30:
+                    l_arr = line.split(" ")
+                    l_arr[int(len(l_arr)/2)] = l_arr[int(len(l_arr)/2)] + "\n"
+                    node_text += " ".join(l_arr) + "\n"
+                else:
+                    node_text += line + "\n"
         elif param_json.get("PromptSource"):
             prompt_wav = param_json.get("PromptLocation")
             node_text += f"음원재생 : \n {prompt_wav.split("/")[-2]+"/"+prompt_wav.split("/")[-1]}"

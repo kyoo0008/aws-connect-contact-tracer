@@ -245,7 +245,7 @@ list_contact_flow_lambda_error_list() {
 
               SECOND_RESPONSE=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --output json)
 
-              echo "$SECOND_RESPONSE" > "xray_trace_$XRAY_ID.json"
+              echo "$SECOND_RESPONSE" > "./virtual_env/xray_trace_$XRAY_ID.json"
 
               # ContactId 재추출
               SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
