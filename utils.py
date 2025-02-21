@@ -124,9 +124,16 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
                 # Lambda 함수 수집 
                 if json_value.get("ContactFlowModuleType") == "InvokeExternalResource":
                     function_arn = json_value.get("Parameters")["FunctionArn"]
+                    params = json_value.get("Parameters")["Parameters"]
+
+
                     lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn))
                     if "idnv-common-if" in function_arn: # common-if 예외처리 
                         lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn.replace("common-if","async-if")))
+
+                    if params.get("keywords") and "chat" == params.get("keywords"):
+                        lambda_log_groups.add("/aws/lmd/aicc-chat-app/alb-chat-if")
+
 
     # JSON 파일 저장    
     output_json_path = f"./virtual_env/contact_flow_{contact_id}.json"

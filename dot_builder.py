@@ -156,7 +156,7 @@ def get_node_text_by_module_type(module_type,log,block_id):
             #     is_just_cut=True,
             #     max_length=30)
         else:
-            node_footer += replaced_arn_log.get("Results")
+            node_footer += replaced_arn_log.get("Results","")
     elif module_type == "PlayPrompt" or module_type == "GetUserInput" or module_type == "StoreUserInput":
         param_str = param_json.get("Text")
         if param_str: 

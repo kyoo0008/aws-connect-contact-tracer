@@ -245,6 +245,8 @@ list_contact_flow_lambda_error_list() {
 
               SECOND_RESPONSE=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --output json)
 
+              echo "$SECOND_RESPONSE" > "xray_trace_$XRAY_ID.json"
+
               # ContactId 재추출
               SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
                   .results[] | 
@@ -255,18 +257,9 @@ list_contact_flow_lambda_error_list() {
                   select(.message.response.contactId) |
                   "\(.message.response.contactId)\t\(.message.service)\t\(.timestamp)"
               ')
-              # SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
-              #     .results[] | 
-              #     {
-              #         timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
-              #         message: (map(select(.field == "@message"))[0].value | fromjson)
-              #     } 
-              # ')
-
-              # echo "$SECOND_CONTACT_INFO" > "$XRAY_ID.json"
 
               if [ ! -z "$SECOND_CONTACT_INFO" ]; then
-                  echo "$SECOND_CONTACT_INFO"$'\n'
+                  echo "$SECOND_CONTACT_INFO"
               fi
           done
       else
