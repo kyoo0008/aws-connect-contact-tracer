@@ -13,6 +13,7 @@ REQUIREMENTS_FILE="requirements.txt"
 EMAIL_REGEX="^[a-zA-Z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-zA-Z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\$"
 UUID_REGEX=^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$
 HANGUL_NAME_REGEX="^[가-힣]{2,}[a-zA-Z]?$"  # 한글 두 글자 이상 + 선택적 영문자
+ENG_NAME_REGEX="^[a-zA-Z ]+"
 cols_num=5
 
 
@@ -95,73 +96,6 @@ list_history_files() {
     done
 }
 
-# list_contact_flow_lambda_error_list() {
-#   # 로그 그룹 배열 (필요한 로그 그룹을 추가하세요)
-#   LOG_GROUPS=(
-#       # "/aws/lmd/aicc-connect-flow-base/flow-agent-workspace-handler"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-alms-if"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-chat-app"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-idnv-async-if"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-idnv-common-if"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-internal-handler"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-kalis-if"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-mdm-if"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-ods-if"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-oneid-if"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-sample-integration"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-tms-if"
-#       # "/aws/lmd/aicc-connect-flow-base/flow-vars-controller"
-#       #"/aws/lmd/aicc-chat-app/alb-chat-if"
-#   )
-
-#   # Insights 쿼리
-#   QUERY="fields @timestamp, @message, @logStream, @log
-#   | filter @message like '\"level\":\"ERROR\"'
-#   | sort @timestamp desc
-#   | limit 10000"
-
-
-#   # 실행 결과를 저장할 변수
-#   RESULTS=""
-
-#   # 각 로그 그룹에 대해 쿼리 실행
-#   for LOG_GROUP in "${LOG_GROUPS[@]}"; do
-
-#       QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
-      
-#       # 쿼리 실행 후 대기 (CloudWatch는 쿼리가 실행되는 데 시간이 필요함)
-#       while true; do
-#           STATUS=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
-#           if [ "$STATUS" == "Complete" ]; then
-#               break
-#           fi
-#           sleep 2
-#       done
-
-
-#       # 결과 가져오기
-#       RESPONSE=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --output json)
-
-#       # JSON에서 ContactId 추출
-#       CONTACT_INFO=$(echo "$RESPONSE" | jq -r '
-#           .results[] | 
-#           {
-#               timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
-#               message: (map(select(.field == "@message"))[0].value | fromjson)
-#           } |
-#           select(.message.ContactId) |
-#           "\(.message.ContactId)\t\(.message.service)\t\(.timestamp)"
-#       ')
-
-#       if [ ! -z "$CONTACT_INFO" ]; then
-#         echo "$CONTACT_INFO"$'\n'
-#       fi
-#   done
-
-  
-
-
-# }
 list_contact_flow_lambda_error_list() {
   # 로그 그룹 배열
   LOG_GROUPS=(
@@ -302,7 +236,7 @@ case $search_option in
     selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
     ;;
   "Agent")
-    echo -e "Agent ID, 한글이름, 또는 Email을 입력하세요:(e.g., 상담사 uuid, 홍길동B, 또는 이메일 형식의 ID)"
+    echo -e "Agent ID, 한글(영문)이름, 또는 Email을 입력하세요:(e.g., 상담사 uuid, 홍길동B, 또는 이메일 형식의 ID)"
     # echo -e "Agent ID 또는 Email 입력 시 빠르게 검색할 수 있습니다."
     read -r -p "❯ " agent_input
     echo "입력된 Agent 정보: $agent_input"
@@ -324,8 +258,20 @@ case $search_option in
           echo "❌ 오류: 해당 Full Name을 가진 상담사를 찾을 수 없습니다."
           exit 1
       fi
+    elif [[ $agent_input =~ $ENG_NAME_REGEX ]]; then  # 영문 Full Name 입력
+      echo "🔍 영문 Full Name 검색 중..."
+      # 전체 상담사 목록에서 검색
+      agent_id=$(aws connect search-users --instance-id $instance_id --output json | \
+          jq -r --arg name "$agent_input" '
+          .Users[] | select((.IdentityInfo.FirstName+" "+.IdentityInfo.LastName) == $name) | .Username'
+      )
+
+      if [[ -z "$agent_id" ]]; then
+          echo "❌ 오류: 해당 Full Name을 가진 상담사를 찾을 수 없습니다."
+          exit 1
+      fi
     else
-      echo "❌ 오류: 유효한 Agent ID (UUID) 또는 이메일 형식의 ID를 입력하세요."
+      echo "❌ 오류: 유효한 Agent ID (UUID), 상담사 명 또는 이메일 형식의 ID를 입력하세요."
       exit 1
     fi
 
