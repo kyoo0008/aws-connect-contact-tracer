@@ -95,8 +95,75 @@ list_history_files() {
     done
 }
 
+# list_contact_flow_lambda_error_list() {
+#   # 로그 그룹 배열 (필요한 로그 그룹을 추가하세요)
+#   LOG_GROUPS=(
+#       # "/aws/lmd/aicc-connect-flow-base/flow-agent-workspace-handler"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-alms-if"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-chat-app"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-idnv-async-if"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-idnv-common-if"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-internal-handler"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-kalis-if"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-mdm-if"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-ods-if"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-oneid-if"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-sample-integration"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-tms-if"
+#       # "/aws/lmd/aicc-connect-flow-base/flow-vars-controller"
+#       #"/aws/lmd/aicc-chat-app/alb-chat-if"
+#   )
+
+#   # Insights 쿼리
+#   QUERY="fields @timestamp, @message, @logStream, @log
+#   | filter @message like '\"level\":\"ERROR\"'
+#   | sort @timestamp desc
+#   | limit 10000"
+
+
+#   # 실행 결과를 저장할 변수
+#   RESULTS=""
+
+#   # 각 로그 그룹에 대해 쿼리 실행
+#   for LOG_GROUP in "${LOG_GROUPS[@]}"; do
+
+#       QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+      
+#       # 쿼리 실행 후 대기 (CloudWatch는 쿼리가 실행되는 데 시간이 필요함)
+#       while true; do
+#           STATUS=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+#           if [ "$STATUS" == "Complete" ]; then
+#               break
+#           fi
+#           sleep 2
+#       done
+
+
+#       # 결과 가져오기
+#       RESPONSE=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --output json)
+
+#       # JSON에서 ContactId 추출
+#       CONTACT_INFO=$(echo "$RESPONSE" | jq -r '
+#           .results[] | 
+#           {
+#               timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
+#               message: (map(select(.field == "@message"))[0].value | fromjson)
+#           } |
+#           select(.message.ContactId) |
+#           "\(.message.ContactId)\t\(.message.service)\t\(.timestamp)"
+#       ')
+
+#       if [ ! -z "$CONTACT_INFO" ]; then
+#         echo "$CONTACT_INFO"$'\n'
+#       fi
+#   done
+
+  
+
+
+# }
 list_contact_flow_lambda_error_list() {
-  # 로그 그룹 배열 (필요한 로그 그룹을 추가하세요)
+  # 로그 그룹 배열
   LOG_GROUPS=(
       "/aws/lmd/aicc-connect-flow-base/flow-agent-workspace-handler"
       "/aws/lmd/aicc-connect-flow-base/flow-alms-if"
@@ -111,24 +178,22 @@ list_contact_flow_lambda_error_list() {
       "/aws/lmd/aicc-connect-flow-base/flow-sample-integration"
       "/aws/lmd/aicc-connect-flow-base/flow-tms-if"
       "/aws/lmd/aicc-connect-flow-base/flow-vars-controller"
+      "/aws/lmd/aicc-chat-app/alb-chat-if"
   )
 
-  # Insights 쿼리
+  # 초기 Insights 쿼리 (ERROR 로그 검색)
   QUERY="fields @timestamp, @message, @logStream, @log
   | filter @message like '\"level\":\"ERROR\"'
   | sort @timestamp desc
   | limit 10000"
 
-
-  # 실행 결과를 저장할 변수
+  # 실행 결과 저장
   RESULTS=""
 
-  # 각 로그 그룹에 대해 쿼리 실행
   for LOG_GROUP in "${LOG_GROUPS[@]}"; do
-
       QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
-      
-      # 쿼리 실행 후 대기 (CloudWatch는 쿼리가 실행되는 데 시간이 필요함)
+
+      # 쿼리 실행 후 대기
       while true; do
           STATUS=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
           if [ "$STATUS" == "Complete" ]; then
@@ -137,29 +202,77 @@ list_contact_flow_lambda_error_list() {
           sleep 2
       done
 
-
-      # 결과 가져오기
+      # 첫 번째 검색 결과 가져오기
       RESPONSE=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --output json)
 
-      # JSON에서 ContactId 추출
+      # ContactId 추출
       CONTACT_INFO=$(echo "$RESPONSE" | jq -r '
           .results[] | 
           {
               timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
               message: (map(select(.field == "@message"))[0].value | fromjson)
           } |
-          select(.message.ContactId) |
-          "\(.message.ContactId)\t\(.message.service)\t\(.timestamp)"
+          select(.message.contactId) |
+          "\(.message.contactId)\t\(.message.service)\t\(.timestamp)"
       ')
 
-      if [ ! -z "$CONTACT_INFO" ]; then
-        echo "$CONTACT_INFO"$'\n'
+      if [ -z "$CONTACT_INFO" ]; then
+          # ContactId가 없는 경우 X-Ray ID 추출
+          XRAY_IDS=$(echo "$RESPONSE" | jq -r '
+              .results[] |
+              {
+                  message: (map(select(.field == "@message"))[0].value | fromjson)
+              } |
+              select(.message.xray_trace_id) |
+              .message.xray_trace_id
+          ' | sort -u)
+
+          for XRAY_ID in $XRAY_IDS; do
+              SECOND_QUERY="fields @timestamp, @message, @logStream, @log
+              | filter @message like '\"xray_trace_id\":\"$XRAY_ID\"'
+              | sort @timestamp desc
+              | limit 10000"
+
+              SECOND_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$SECOND_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+
+              while true; do
+                  SECOND_STATUS=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+                  if [ "$SECOND_STATUS" == "Complete" ]; then
+                      break
+                  fi
+                  sleep 2
+              done
+
+              SECOND_RESPONSE=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --output json)
+
+              # ContactId 재추출
+              SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
+                  .results[] | 
+                  {
+                      timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
+                      message: (map(select(.field == "@message"))[0].value | fromjson)
+                  } |
+                  select(.message.response.contactId) |
+                  "\(.message.response.contactId)\t\(.message.service)\t\(.timestamp)"
+              ')
+              # SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
+              #     .results[] | 
+              #     {
+              #         timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
+              #         message: (map(select(.field == "@message"))[0].value | fromjson)
+              #     } 
+              # ')
+
+              # echo "$SECOND_CONTACT_INFO" > "$XRAY_ID.json"
+
+              if [ ! -z "$SECOND_CONTACT_INFO" ]; then
+                  echo "$SECOND_CONTACT_INFO"$'\n'
+              fi
+          done
+      else
+          echo "$CONTACT_INFO"$'\n'
       fi
   done
-
-  
-
-
 }
 
 # Amazon Connect Instance ID

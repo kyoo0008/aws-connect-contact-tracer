@@ -48,7 +48,7 @@ def load_flow_translation(json_path):
         flow_translation = json.load(f)
     return {item["en_name"]: item["ko_name"] for item in flow_translation}
 
-flow_translation_map = load_flow_translation("./flow_ko_en.json")
+flow_translation_map = load_flow_translation("./mnt/flow_ko_en.json")
 
 
 # ✅ Edge 추가 (노드의 index 순서대로)
@@ -160,7 +160,7 @@ def get_node_text_by_module_type(module_type,log,block_id):
     elif module_type == "PlayPrompt" or module_type == "GetUserInput" or module_type == "StoreUserInput":
         param_str = param_json.get("Text")
         if param_str: 
-            node_text += wrap_text(param_str)
+            node_text += wrap_text(param_str) if "\n" not in param_str else param_str
         elif param_json.get("PromptSource"):
             prompt_wav = param_json.get("PromptLocation")
             node_text += f"음원재생 : \n {prompt_wav.split("/")[-2]+"/"+prompt_wav.split("/")[-1]}"
@@ -377,9 +377,14 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                     last_op = None
                     index = 1
                     for t in xray_trace:
-                        if t.get("aws"):
+                        try:
                             op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
-                            if op != last_op:
+                        except KeyError:
+                            op = t["aws"]["operation"] + '\n'
+                        except Exception as e:
+                            print(e,xray_trace)
+
+                        if op != last_op:
                                 xray_text += f"Operation {index} : \n" + op
                                 last_op = op
                                 index += 1
