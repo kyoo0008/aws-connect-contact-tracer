@@ -406,8 +406,14 @@ case $search_option in
       )
 
       if [[ -z "$agent_id" ]]; then
-          echo "❌ 오류: 해당 Full Name을 가진 상담사를 찾을 수 없습니다."
-          exit 1
+          agent_id=$(aws connect search-users --instance-id $instance_id --output json | \
+              jq -r --arg name "$agent_input" '
+              .Users[] | select((.IdentityInfo.LastName+" "+.IdentityInfo.FirstName) == $name) | .Username'
+          )
+          if [[ -z "$agent_id" ]]; then
+            echo "❌ 오류: 해당 Full Name을 가진 상담사를 찾을 수 없습니다."
+            exit 1
+          fi
       fi
     else
       echo "❌ 오류: 유효한 Agent ID (UUID), 상담사 명 또는 이메일 형식의 ID를 입력하세요."
