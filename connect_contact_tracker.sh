@@ -213,6 +213,134 @@ list_contact_flow_lambda_error_list() {
   done
 }
 
+list_contact_flow_lambda_timeout_list() {
+  # 로그 그룹 배열
+  LOG_GROUPS=(
+      "/aws/lmd/aicc-connect-flow-base/flow-agent-workspace-handler"
+      "/aws/lmd/aicc-connect-flow-base/flow-alms-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-chat-app"
+      "/aws/lmd/aicc-connect-flow-base/flow-idnv-async-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-idnv-common-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-internal-handler"
+      "/aws/lmd/aicc-connect-flow-base/flow-kalis-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-mdm-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-ods-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-oneid-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-sample-integration"
+      "/aws/lmd/aicc-connect-flow-base/flow-tms-if"
+      "/aws/lmd/aicc-connect-flow-base/flow-vars-controller"
+      "/aws/lmd/aicc-chat-app/alb-chat-if"
+      "/aws/lmd/aicc-chat-app/sns-chat-if"  
+  )
+
+  # timed out 로그를 찾기 위한 쿼리
+  TIMEOUT_QUERY="fields @timestamp, @message, @logStream, @log
+  | filter @message like 'timed out'
+  | sort @timestamp desc
+  | limit 10000"
+
+  # 실행 결과 저장
+  RESULTS=""
+
+  for LOG_GROUP in "${LOG_GROUPS[@]}"; do
+      TIMEOUT_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$TIMEOUT_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+
+      # 쿼리 실행 후 대기
+      while true; do
+          STATUS=$(aws logs get-query-results --query-id "$TIMEOUT_QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+          if [ "$STATUS" == "Complete" ]; then
+              break
+          fi
+          sleep 2
+      done
+
+      # 첫 번째 검색 결과 가져오기
+      TIMEOUT_RESPONSE=$(aws logs get-query-results --query-id "$TIMEOUT_QUERY_ID" --region ap-northeast-2 --output json)
+      
+      # RequestId 추출
+      TIMEOUT_REQUEST_ID=$(echo "$TIMEOUT_RESPONSE" | jq -r ' 
+          .results[] | map(select(.field == "@message"))[0].value 
+      ' | awk '{print $2}')
+
+      if [ ! -z "$TIMEOUT_REQUEST_ID" ]; then
+
+          # RequestId를 기반으로 XRAY TraceId 추출 쿼리
+          XRAY_QUERY="fields @timestamp, @message, @logStream, @log
+          | filter @message like \"$TIMEOUT_REQUEST_ID\"
+          | sort @timestamp desc
+          | limit 10000"
+
+          XRAY_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$XRAY_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+
+          # 쿼리 실행 후 대기
+          while true; do
+              XRAY_STATUS=$(aws logs get-query-results --query-id "$XRAY_QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+              if [ "$XRAY_STATUS" == "Complete" ]; then
+                  break
+              fi
+              sleep 2
+          done
+
+          # XRAY TraceId 추출
+          XRAY_RESPONSE=$(aws logs get-query-results --query-id "$XRAY_QUERY_ID" --region ap-northeast-2 --output json)
+
+          XRAY_TRACE_ID=$(echo "$XRAY_RESPONSE" | jq -r '
+            .results[] |
+            map(select(.field == "@message"))[0].value |
+            match("XRAY TraceId: ([a-f0-9-]{35})") | .captures[0].string
+          ')
+
+          if [ ! -z "$XRAY_TRACE_ID" ]; then
+
+              SECOND_QUERY="fields @timestamp, @message, @logStream, @log
+              | filter @message like '\"xray_trace_id\":\"$XRAY_TRACE_ID\"'
+              | sort @timestamp desc
+              | limit 10000"
+
+              SECOND_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$SECOND_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+
+              while true; do
+                  SECOND_STATUS=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+                  if [ "$SECOND_STATUS" == "Complete" ]; then
+                      break
+                  fi
+                  sleep 2
+              done
+
+              SECOND_RESPONSE=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --output json)
+
+              # ContactId 재추출
+              SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
+                  .results[] | 
+                  {
+                      timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
+                      message: (map(select(.field == "@message"))[0].value | fromjson)
+                  } |
+                  select(.message.response.contactId or .message.InitialContactId) |
+                  "\(
+                    if .message.response.contactId then
+                      .message.response.contactId
+                    else
+                      .message.InitialContactId
+                    end
+                  )\t\(.message.service)\t\(.timestamp)"
+              ')
+
+              CONTACT_ID=$(echo "$SECOND_CONTACT_INFO" | awk "NR==1" | awk '{print $1}')
+
+              if [ ! -z "$SECOND_CONTACT_INFO" ]; then
+                  XRAY_PATH=./virtual_env/"${CONTACT_ID}"/if-error-xray-trace
+                  mkdir -p $XRAY_PATH
+                  echo "$SECOND_RESPONSE" > "${XRAY_PATH}/${XRAY_TRACE_ID}.json"
+                  echo "$SECOND_CONTACT_INFO" | awk "NR==1"
+              fi
+          fi
+      fi
+  done
+}
+
+
+
 # Amazon Connect Instance ID
 instance_id=$(get_instance_id_from_alias "$instance_alias")
 if [ -z "$instance_id" ]; then
@@ -326,14 +454,28 @@ case $search_option in
     fi
     ;;
   "LambdaError")
-    echo "⏳ 탐색 중 입니다..."
-    contact_ids=$(list_contact_flow_lambda_error_list)
-    if [ -z "$contact_ids" ]; then
-      echo "❌ 저장된 Contact Flow 기록이 없습니다."
-      exit 1
-    fi
+    search_option=$(echo -e "Lambda Error\nTimeout" | fzf --height 7 --prompt "검색할 기준을 선택하세요 (Timeout, Lambda Error):" )
+    if [ $search_option == "Timeout Error" ]; then
+      echo "⏳ 탐색 중 입니다..."
+      contact_ids=$(list_contact_flow_lambda_timeout_list)
 
-    selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
+      if [ -z "$contact_ids" ]; then
+        echo "❌ 저장된 Contact Flow 기록이 없습니다."
+        exit 1
+      fi
+
+      selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
+    else 
+      echo "⏳ 탐색 중 입니다..."
+      contact_ids=$(list_contact_flow_lambda_error_list)
+
+      if [ -z "$contact_ids" ]; then
+        echo "❌ 저장된 Contact Flow 기록이 없습니다."
+        exit 1
+      fi
+
+      selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
+    fi
     ;;
   *)
     echo "올바른 옵션을 선택하세요."
