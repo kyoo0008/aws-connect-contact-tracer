@@ -20,7 +20,14 @@ COLS_NUM = 5
 EXCEPT_CONTACT_FLOW_NAME = [
     '99_MOD_Dummy', 'InvokeFlowModule'
 ]
-
+def check_json_file_exists(directory):
+    try:
+        for filename in os.listdir(directory):
+            if filename.endswith('.json'):
+                return True
+        return False
+    except Exception:
+        return False
 
 # Util
 def generate_node_ids(logs):
@@ -224,15 +231,7 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
         response = cloudwatch_client.get_query_results(queryId=query_id)
 
 
-    logs = []
-
-    if len(response["results"]) > 0:
-
-        for result in response["results"]:
-            for field in result:
-                if field["field"] == "@message":
-                    json_value = json.loads(field["value"])
-                    logs.append(json_value)
+    logs = filter_lambda_logs(response)
 
     
 
@@ -242,6 +241,17 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
         #     json.dump(logs, json_file, ensure_ascii=False, indent=4)
 
         # print(f"JSON 파일이 저장되었습니다: {output_json_path}")
+
+    return logs
+
+def filter_lambda_logs(response):
+    logs = []
+    if len(response["results"]) > 0:
+        for result in response["results"]:
+            for field in result:
+                if field["field"] == "@message":
+                    json_value = json.loads(field["value"])
+                    logs.append(json_value)
 
     return logs
 

@@ -113,6 +113,7 @@ list_contact_flow_lambda_error_list() {
       "/aws/lmd/aicc-connect-flow-base/flow-tms-if"
       "/aws/lmd/aicc-connect-flow-base/flow-vars-controller"
       "/aws/lmd/aicc-chat-app/alb-chat-if"
+      "/aws/lmd/aicc-chat-app/sns-chat-if"
   )
 
   # 초기 Insights 쿼리 (ERROR 로그 검색)
@@ -179,8 +180,6 @@ list_contact_flow_lambda_error_list() {
 
               SECOND_RESPONSE=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --output json)
 
-              echo "$SECOND_RESPONSE" > "./virtual_env/xray_trace_$XRAY_ID.json"
-
               # ContactId 재추출
               SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
                   .results[] | 
@@ -188,13 +187,25 @@ list_contact_flow_lambda_error_list() {
                       timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
                       message: (map(select(.field == "@message"))[0].value | fromjson)
                   } |
-                  select(.message.response.contactId) |
-                  "\(.message.response.contactId)\t\(.message.service)\t\(.timestamp)"
+                  select(.message.response.contactId or .message.initialContactId) |
+                  "\(
+                    if .message.response.contactId then
+                      .message.response.contactId
+                    else
+                      .message.initialContactId
+                    end
+                  )\t\(.message.service)\t\(.timestamp)"
               ')
 
+              CONTACT_ID=$(echo "$SECOND_CONTACT_INFO" | awk "NR==1" | awk '{print $1}')
+
               if [ ! -z "$SECOND_CONTACT_INFO" ]; then
-                  echo "$SECOND_CONTACT_INFO"
+                  XRAY_PATH=./virtual_env/"${CONTACT_ID}"/if-error-xray-trace
+                  mkdir -p $XRAY_PATH
+                  echo "$SECOND_RESPONSE" > "${XRAY_PATH}/${XRAY_ID}.json"
+                  echo "$SECOND_CONTACT_INFO" | awk "NR==1"
               fi
+
           done
       else
           echo "$CONTACT_INFO"$'\n'

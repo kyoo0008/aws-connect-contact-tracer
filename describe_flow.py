@@ -2,19 +2,6 @@ import boto3
 import json
 import re
 
-def load_json_file(file_path:str):
-  print(os.path.abspath(file_path))
-
-  try:
-    with open(file_path, 'r', encoding='utf-8') as file:
-      data = json.load(file)
-  except ValueError as err:
-    print("❌ 파일 '{}'은(는) 올바른 JSON 형식이 아닙니다!".format(file_path))
-    print(err)
-    exit(1)
-
-  return data
-
 def extract_ids_from_arn(arn):
     """ARN에서 instance_id 및 flow_id 또는 flow_module_id 추출"""
     match = re.match(

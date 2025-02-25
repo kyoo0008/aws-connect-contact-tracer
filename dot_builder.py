@@ -18,7 +18,9 @@ from utils import generate_node_ids, \
                     replace_generic_arn, \
                     get_func_name, \
                     calculate_timestamp_gap, \
-                    get_xray_trace
+                    get_xray_trace, \
+                    check_json_file_exists, \
+                    filter_lambda_logs
 from describe_flow import get_comparison_value
 import traceback
 
@@ -392,9 +394,9 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                             print(e,xray_trace)
 
                         if op != last_op:
-                                xray_text += f"Operation {index} : \n" + op
-                                last_op = op
-                                index += 1
+                            xray_text += f"Operation {index} : \n" + op
+                            last_op = op
+                            index += 1
 
 
                 # xray_trace_id가 있는 관련 로그 찾기
@@ -405,56 +407,8 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                 # xray trace dot
                 # associated_lambda_logs = associated_lambda_logs.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
 
-                xray_nodes = []
-                if len(associated_lambda_logs) > 0:
-
-                    xray_dot = Digraph(comment=f"AWS Lambda Xray Trace : {xray_trace_id}")
-                    xray_dot.attr(rankdir="LR", label=f"xray_trace_id : {xray_trace_id}", labelloc="t",fontsize="24")
-                    
-
-                    for index,l in enumerate(associated_lambda_logs):
-
-                        color = 'tomato' if l.get("level") == "ERROR" or l.get("level") == "WARN" else 'lightgray'
-                        node_id = f"{xray_trace_id}_{l.get("timestamp").replace(':', '').replace('.', '')}_{index}"
-
-                        node_text = ""
-                        if "parameter" in l.get("message",""):
-                            param_json = l.get("parameters",{})
-                            for key in param_json:
-                                node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
-                        elif "attribute" in l.get("message",""):
-                            param_json = l.get("attributes",{})
-                            for key in param_json:
-                                node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
-                        else:
-                            node_text += l.get("message","").replace("]","]\n")
-
-                        node_title = l.get("level")
-                        if l.get("level") == "WARN":
-                            node_title = f"⚠️   {l.get("level")}"
-                        elif l.get("level") == "ERROR":
-                            node_title = f"🚨   {l.get("level")}"
-
-
-                        # 노드 추가
-                        xray_dot.node(
-                        node_id,
-                        label=get_node_label(l.get("level"), node_title, wrap_text(node_text,is_just_cut=True,max_length=100),None,l.get("message","") if "parameter" in l.get("message","") or "attribute" in l.get("message","") else " "),
-                        shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
-                        style='rounded,filled',
-                        color=color,
-                        URL=str(json.dumps(l, indent=4, ensure_ascii=False))
-                        ) 
-                        
-                        xray_nodes.append(node_id)
-
-                    xray_dot = add_edges(xray_dot, xray_nodes)
-
-                    if len(xray_nodes) > 0:
-                        apply_rank(xray_dot,xray_nodes)
-
-                    xray_trace_file = f"./virtual_env/xray_trace_{xray_trace_id}"
-                    xray_dot.render(xray_trace_file, format="dot", cleanup=True)
+                xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs)
+                
 
                 # level 값 가져오기
                 levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
@@ -489,13 +443,69 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                 nodes.append(node_id)
 
                 if l_error_count > 0 or l_warn_count > 0:
-                    error_count += 1
+                    error_count += (l_error_count+l_warn_count)
 
         except Exception:
             print(check_log)
             print(traceback.format_exc())
 
     return dot, nodes, error_count
+
+def build_xray_nodes(xray_trace_id,associated_lambda_logs):
+    xray_dot = Digraph(comment=f"AWS Lambda Xray Trace : {xray_trace_id}")
+    xray_dot.attr(rankdir="LR", label=f"xray_trace_id : {xray_trace_id}", labelloc="t",fontsize="24")
+    xray_nodes=[]
+    if len(associated_lambda_logs) > 0:
+        
+        
+
+        for index,l in enumerate(associated_lambda_logs):
+
+            color = 'tomato' if l.get("level") == "ERROR" or l.get("level") == "WARN" else 'lightgray'
+            node_id = f"{xray_trace_id}_{l.get("timestamp").replace(':', '').replace('.', '')}_{index}"
+
+            node_text = ""
+            if "parameter" in l.get("message",""):
+                param_json = l.get("parameters",{})
+                for key in param_json:
+                    node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
+            elif "attribute" in l.get("message",""):
+                param_json = l.get("attributes",{})
+                for key in param_json:
+                    node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
+            else:
+                node_text += l.get("message","").replace("]","]\n")
+
+            node_title = l.get("level")
+            if l.get("level") == "WARN":
+                node_title = f"⚠️   {l.get("level")}"
+            elif l.get("level") == "ERROR":
+                node_title = f"🚨   {l.get("level")}"
+
+
+            # 노드 추가
+            xray_dot.node(
+            node_id,
+            label=get_node_label(l.get("level"), node_title, wrap_text(node_text,is_just_cut=True,max_length=100),None,l.get("message","") if "parameter" in l.get("message","") or "attribute" in l.get("message","") else " "),
+            shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
+            style='rounded,filled',
+            color=color,
+            URL=str(json.dumps(l, indent=4, ensure_ascii=False))
+            ) 
+            
+            xray_nodes.append(node_id)
+
+        xray_dot = add_edges(xray_dot, xray_nodes)
+
+        if len(xray_nodes) > 0:
+            apply_rank(xray_dot,xray_nodes)
+
+        xray_trace_file = f"./virtual_env/xray_trace_{xray_trace_id}"
+        xray_dot.render(xray_trace_file, format="dot", cleanup=True)
+
+    
+    return xray_trace_file
+    
 
 # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
 def dup_block_sanitize(node_cache, dot, nodes):
@@ -772,6 +782,72 @@ def build_main_flow(logs, lambda_logs, contact_id):
 
     apply_rank(main_flow_dot, nodes)
 
+
+    # if error
+    if_error_xray_path=f"./virtual_env/{contact_id}/if-error-xray-trace"
+
+    if check_json_file_exists(if_error_xray_path):
+        for filename in os.listdir(if_error_xray_path):
+            xray_trace_id = filename.replace(".json","")
+            associated_lambda_logs ={}
+            with open(if_error_xray_path+"/"+filename, 'r', encoding='utf-8') as file:
+                associated_lambda_logs = filter_lambda_logs(json.loads(file.read()))
+
+            xray_trace = get_xray_trace(xray_trace_id)
+            xray_text = ""
+            if len(xray_trace) > 0:
+                # print(f"xray_trace : {xray_trace}")
+                last_op = None
+                index = 1
+                for t in xray_trace:
+                    try:
+                        op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
+                    except KeyError:
+                        op = t["aws"]["operation"] + '\n'
+                    except Exception as e:
+                        print(e,xray_trace)
+
+                    if op != last_op:
+                        xray_text += f"Operation {index} : \n" + op
+                        last_op = op
+                        index += 1
+
+            xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs)
+
+            # level 값 가져오기
+            levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
+            l_warn_count = 0
+            l_error_count = 0
+            for l in levels:
+                if l == "ERROR":
+                    l_error_count += 1
+                elif l == "WARN":
+                    l_warn_count += 1
+                    
+            color = 'tomato' if l_error_count > 0 or l_warn_count > 0 else 'lightgray'
+            lambda_node_footer = ((f"Warn : {l_warn_count}\n" if l_warn_count > 0 else "") + (f"Error : {l_error_count}" if l_error_count > 0 else "")) if l_error_count > 0 or l_warn_count > 0 else None
+            node_id = f"{log.get("Timestamp").replace(":","").replace(".","")}_{xray_trace_id}"
+
+            # 노드 추가
+            main_flow_dot.node(
+                node_id,
+                label=get_node_label(
+                    "xray",
+                    "(Interface) " + get_module_name_ko("xray", log) + "  ➡️",
+                    xray_text,
+                    lambda_node_footer,
+                    xray_trace_id
+                ),
+                shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
+                style='rounded,filled',
+                color=color,
+                URL=f"{xray_trace_file}.dot"
+            )
+
+            nodes.append(node_id)
+
+            if l_error_count > 0 or l_warn_count > 0:
+                error_count += (l_error_count+l_warn_count)
 
     return main_flow_dot, nodes
 
