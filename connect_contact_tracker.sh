@@ -455,8 +455,8 @@ case $search_option in
     ;;
   "LambdaError")
     search_option=$(echo -e "Lambda Error\nTimeout" | fzf --height 7 --prompt "검색할 기준을 선택하세요 (Timeout, Lambda Error):" )
-    if [ $search_option == "Timeout Error" ]; then
-      echo "⏳ 탐색 중 입니다..."
+    if [ $search_option == "Timeout" ]; then
+      echo "⏳ Timeout 탐색 중 입니다..."
       contact_ids=$(list_contact_flow_lambda_timeout_list)
 
       if [ -z "$contact_ids" ]; then
