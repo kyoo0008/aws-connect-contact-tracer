@@ -272,6 +272,19 @@ def get_xray_trace(trace_id, region="ap-northeast-2"):
     # JSON 파싱
     try:
         data = json.loads(result.stdout)
+
+        with open(f"./virtual_env/batch_xray_{trace_id}.json","w",encoding="utf-8") as f:
+            # json.loads(segment["Document"])
+            traces = [
+                json.loads(segment["Document"])
+                for trace in data.get("Traces", [])
+                for segment in trace.get("Segments", [])
+                # if "Document" in segment and "DynamoDB" in json.loads(segment["Document"]).get("name", "")
+            ]
+            json.dump(traces, f, indent=2, ensure_ascii=False)
+            f.close()
+
+        
         dynamodb_traces = [
             json.loads(segment["Document"])
             for trace in data.get("Traces", [])

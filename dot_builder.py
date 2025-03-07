@@ -453,7 +453,16 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
 def build_xray_nodes(xray_trace_id,associated_lambda_logs):
     xray_dot = Digraph(comment=f"AWS Lambda Xray Trace : {xray_trace_id}")
+    
     xray_dot.attr(rankdir="LR", label=f"xray_trace_id : {xray_trace_id}", labelloc="t",fontsize="24")
+
+    with open(f"./virtual_env/batch_xray_{xray_trace_id}.json", "r", encoding="utf-8") as f:
+        xray_batch_json_data = json.loads(f.read())
+
+        xray_dot.node("batch", label="Batch", shape="Mdiamond", URL=json.dumps(xray_batch_json_data, indent=8, ensure_ascii=False))
+
+    
+
     xray_nodes=[]
     if len(associated_lambda_logs) > 0:
         
