@@ -451,17 +451,32 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
     return dot, nodes, error_count
 
+def process_subsegments(xray_dot,json_data):
+    if json_data.get("subsegments"):
+        for data in json_data:
+            xray_dot.node(data) # To-do
+            if data.get("subsegments"):
+                process_subsegments(xray_dot,data)
+    else:
+        return xray_dot
+        
+
 def build_xray_nodes(xray_trace_id,associated_lambda_logs):
     xray_dot = Digraph(comment=f"AWS Lambda Xray Trace : {xray_trace_id}")
     
     xray_dot.attr(rankdir="LR", label=f"xray_trace_id : {xray_trace_id}", labelloc="t",fontsize="24")
 
     with open(f"./virtual_env/batch_xray_{xray_trace_id}.json", "r", encoding="utf-8") as f:
-        xray_batch_json_data = json.loads(f.read())
+        xray_batch_json_data_list = json.loads(f.read())
+        xray_dot.node("start", label="Start", shape="Mdiamond", URL=json.dumps(xray_batch_json_data_list, indent=8, ensure_ascii=False))
+        for xray_batch_json_data in xray_batch_json_data_list:
+            origin = xray_batch_json_data.get("origin","")
+            if "AWS" in origin:
+                icon_path = f"{os.getcwd()}/mnt/aws/{origin.split("::")[1]}.png"
+                xray_dot.node(xray_batch_json_data.get("id"), label="",xlabel=f"{origin}",image=icon_path, URL=json.dumps(d,indent=2,ensure_ascii=False))
 
-        xray_dot.node("batch", label="Batch", shape="Mdiamond", URL=json.dumps(xray_batch_json_data, indent=8, ensure_ascii=False))
+            xray_dot = process_subsegments(xray_dot,json_data) # To-do
 
-    
 
     xray_nodes=[]
     if len(associated_lambda_logs) > 0:
