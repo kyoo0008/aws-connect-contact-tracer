@@ -451,32 +451,63 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
     return dot, nodes, error_count
 
-def process_subsegments(xray_dot,json_data):
+def process_subsegments(parent_id, xray_dot, json_data):
     if json_data.get("subsegments"):
-        for data in json_data:
-            xray_dot.node(data) # To-do
-            if data.get("subsegments"):
-                process_subsegments(xray_dot,data)
-    else:
-        return xray_dot
-        
+        for data in json_data["subsegments"]:
+            try:
+                icon_path = f"{os.getcwd()}/mnt/aws/{data.get("name")}.png"
+                if os.path.isfile(icon_path):
+                    xray_dot.node(data.get("id"), label=data.get("name",""), xlabel="",image=icon_path, URL=json.dumps(data, indent=2, ensure_ascii=False))
+                else:
+                    xray_dot.node(data.get("id"), label=data.get("name",""), xlabel="",URL=json.dumps(data, indent=2, ensure_ascii=False))
+                    
+
+                xray_dot.edge(parent_id+":e",data.get("id")+":w",headlabel=get_xray_edge_label(data),labeldistance="4",minlen="5")
+
+                if data.get("subsegments"):
+                    process_subsegments(data.get("id"),xray_dot, data)
+                
+            except Exception as e:
+                print(data)
+                print(e)
+    return xray_dot
+
+def get_xray_edge_label(data):
+
+    label = ""
+
+    if data.get("name") == "SSM":
+        label += data["aws"]["operation"]
+    elif data.get("name") == "DynamoDB":
+        label += f"{data["aws"]["operation"]}\n{data["aws"]["table_name"]}"
+    elif "koreanair.com" in data.get("name"):
+        label += f"{data["http"]["request"]["method"]}\n{"/".join(data["http"]["request"]["url"].split("/")[3:])}"
+
+    return label
+
 
 def build_xray_nodes(xray_trace_id,associated_lambda_logs):
     xray_dot = Digraph(comment=f"AWS Lambda Xray Trace : {xray_trace_id}")
     
-    xray_dot.attr(rankdir="LR", label=f"xray_trace_id : {xray_trace_id}", labelloc="t",fontsize="24")
+    xray_dot.attr(rankdir="LR", label=f"xray_trace_id : {xray_trace_id}", labelloc="t",fontsize="24",forcelabels="true")
 
     with open(f"./virtual_env/batch_xray_{xray_trace_id}.json", "r", encoding="utf-8") as f:
         xray_batch_json_data_list = json.loads(f.read())
-        xray_dot.node("start", label="Start", shape="Mdiamond", URL=json.dumps(xray_batch_json_data_list, indent=8, ensure_ascii=False))
+        
         for xray_batch_json_data in xray_batch_json_data_list:
+
             origin = xray_batch_json_data.get("origin","")
             if "AWS" in origin:
                 icon_path = f"{os.getcwd()}/mnt/aws/{origin.split("::")[1]}.png"
-                xray_dot.node(xray_batch_json_data.get("id"), label="",xlabel=f"{origin}",image=icon_path, URL=json.dumps(d,indent=2,ensure_ascii=False))
+                xray_dot.node(xray_batch_json_data.get("id"),
+                                label=xray_batch_json_data.get("name"),
+                                image=icon_path, URL=json.dumps(xray_batch_json_data,indent=2,ensure_ascii=False))
 
-            xray_dot = process_subsegments(xray_dot,json_data) # To-do
+            if xray_batch_json_data.get("parent_id"):
+                xray_dot.edge(xray_batch_json_data.get("parent_id"),xray_batch_json_data.get("id"))
 
+            xray_dot = process_subsegments(xray_batch_json_data.get("id"),xray_dot,xray_batch_json_data) 
+            
 
     xray_nodes=[]
     if len(associated_lambda_logs) > 0:
