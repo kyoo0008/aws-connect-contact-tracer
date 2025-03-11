@@ -451,40 +451,72 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
     return dot, nodes, error_count
 
-def process_subsegments(parent_id, xray_dot, json_data):
+def get_segment_node(xray_dot,subdata,parent_id):
+    icon_path = f"{os.getcwd()}/mnt/aws/{subdata.get("name")}.png"
+    if os.path.isfile(icon_path):
+        xray_dot.node(subdata.get("id"), label=subdata.get("name",""), image=icon_path, URL=json.dumps(subdata, indent=2, ensure_ascii=False))
+    else:
+        xray_dot.node(subdata.get("id"), label=subdata.get("name",""), image=f"{os.getcwd()}/mnt/aws/settings.png", URL=json.dumps(subdata, indent=2, ensure_ascii=False))
+        
+    label = get_xray_edge_label(subdata)
+    if label != "":
+        xray_dot.edge(parent_id+":e",subdata.get("id")+":w",headlabel=get_xray_edge_label(subdata),minlen="2")
+    else:
+        xray_dot.edge(parent_id+":e",subdata.get("id")+":w")
+    return xray_dot
+
+def process_subsegments(xray_dot, json_data):
     if json_data.get("subsegments"):
         for data in json_data["subsegments"]:
-            try:
-                icon_path = f"{os.getcwd()}/mnt/aws/{data.get("name")}.png"
-                if os.path.isfile(icon_path):
-                    xray_dot.node(data.get("id"), label=data.get("name",""), xlabel="",image=icon_path, URL=json.dumps(data, indent=2, ensure_ascii=False))
-                else:
-                    xray_dot.node(data.get("id"), label=data.get("name",""), xlabel="",URL=json.dumps(data, indent=2, ensure_ascii=False))
-                    
+            if data.get("name") in ["Overhead","Dwell Time"]:
+                continue
+            if data.get("name") == "Invocation" or "Attempt" in data.get("name"):
+                if len(data.get("subsegments",[])) > 0:
+                    for subdata in data.get("subsegments"):
+                        if subdata.get("name") in ["Overhead", "Dwell Time"]:
+                            continue
+                        else:
+                            xray_dot = get_segment_node(xray_dot,subdata,json_data.get("id"))            
+            else:
+                xray_dot = get_segment_node(xray_dot,data,json_data.get("id"))
 
-                xray_dot.edge(parent_id+":e",data.get("id")+":w",headlabel=get_xray_edge_label(data),labeldistance="4",minlen="5")
-
-                if data.get("subsegments"):
-                    process_subsegments(data.get("id"),xray_dot, data)
-                
-            except Exception as e:
-                print(data)
-                print(e)
+            
     return xray_dot
 
 def get_xray_edge_label(data):
 
     label = ""
 
-    if data.get("name") == "SSM":
+    if data.get("name") == "SSM" or data.get("name") == "Connect" :
         label += data["aws"]["operation"]
     elif data.get("name") == "DynamoDB":
         label += f"{data["aws"]["operation"]}\n{data["aws"]["table_name"]}"
-    elif "koreanair.com" in data.get("name"):
+    elif "." in data.get("name"):
         label += f"{data["http"]["request"]["method"]}\n{"/".join(data["http"]["request"]["url"].split("/")[3:])}"
 
     return label
 
+def get_xray_parent_id(parent_id, xray_data):
+
+    invocation_id = None
+
+    if parent_id:
+        for segment in xray_data:
+            if segment.get("subsegments"):
+                for i in segment.get("subsegments"):
+                    if i["id"] == parent_id:
+                        invocation_id = segment["parent_id"]
+                        break
+
+    if invocation_id:
+        for segment in xray_data:
+            if segment.get("subsegments"):
+                for j in segment.get("subsegments"):
+                    if j["id"] == invocation_id:
+                        return segment["id"]
+
+    return None
+                        
 
 def build_xray_nodes(xray_trace_id,associated_lambda_logs):
     xray_dot = Digraph(comment=f"AWS Lambda Xray Trace : {xray_trace_id}")
@@ -496,18 +528,40 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
         
         for xray_batch_json_data in xray_batch_json_data_list:
 
-            origin = xray_batch_json_data.get("origin","")
-            if "AWS" in origin:
-                icon_path = f"{os.getcwd()}/mnt/aws/{origin.split("::")[1]}.png"
-                xray_dot.node(xray_batch_json_data.get("id"),
-                                label=xray_batch_json_data.get("name"),
-                                image=icon_path, URL=json.dumps(xray_batch_json_data,indent=2,ensure_ascii=False))
+            # parent_data = [l for l in xray_batch_json_data_list if xray_batch_json_data.get("parent_id") == l.get("id")]
+            # if len(parent_data) > 0 and parent_data[0].get("name") == xray_batch_json_data.get("name"):
+            #     continue
 
-            if xray_batch_json_data.get("parent_id"):
-                xray_dot.edge(xray_batch_json_data.get("parent_id"),xray_batch_json_data.get("id"))
-
-            xray_dot = process_subsegments(xray_batch_json_data.get("id"),xray_dot,xray_batch_json_data) 
+            xray_dot = process_subsegments(xray_dot,xray_batch_json_data) 
             
+            origin = xray_batch_json_data.get("origin","")
+
+            if xray_batch_json_data.get("subsegments"):
+                for segment in xray_batch_json_data["subsegments"]:
+                    if segment["name"] == "Overhead":
+
+                        icon_path = ""
+                        if "AWS" in origin:
+                            icon_path = f"{os.getcwd()}/mnt/aws/{origin.split("::")[1]}.png"
+                        else:
+                            icon_path = f"{os.getcwd()}/mnt/aws/{xray_batch_json_data.get("name")}.png"
+
+                        if os.path.isfile(icon_path):
+                            
+                            xray_dot.node(xray_batch_json_data.get("id"),
+                                            label=xray_batch_json_data.get("name"),
+                                            image=icon_path, URL=json.dumps(xray_batch_json_data,indent=2,ensure_ascii=False))
+                        else:
+                            xray_dot.node(xray_batch_json_data.get("id"),
+                                            label=xray_batch_json_data.get("name"),
+                                            image=f"{os.getcwd()}/mnt/aws/settings.png", URL=json.dumps(xray_batch_json_data,indent=2,ensure_ascii=False))
+                parent_id = get_xray_parent_id(xray_batch_json_data.get("parent_id"),xray_batch_json_data_list)
+
+                if parent_id:
+                    xray_dot.edge(parent_id, xray_batch_json_data.get("id"))
+
+                # if xray_batch_json_data.get("parent_id"):
+                #     xray_dot.edge(xray_batch_json_data.get("parent_id"),xray_batch_json_data.get("id"))
 
     xray_nodes=[]
     if len(associated_lambda_logs) > 0:
