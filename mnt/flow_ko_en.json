@@ -16,17 +16,17 @@
     },
     {
         "en_name": "CreateCase",
-        "ko_name": "사례",
+        "ko_name": "사례(Create)",
         "ko_desc": "사례를 가져오거나 업데이트하거나 생성합니다."
     },
     {
         "en_name": "GetCase",
-        "ko_name": "사례",
+        "ko_name": "사례(Get)",
         "ko_desc": "사례를 가져오거나 업데이트하거나 생성합니다."
     },
     {
         "en_name": "UpdateCase",
-        "ko_name": "사례",
+        "ko_name": "사례(Update)",
         "ko_desc": "사례를 가져오거나 업데이트하거나 생성합니다."
     },
     {
