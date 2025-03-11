@@ -487,7 +487,7 @@ def get_xray_edge_label(data):
 
     label = ""
 
-    if data.get("name") == "SSM" or data.get("name") == "Connect" :
+    if data.get("name") == "SSM" or data.get("name") == "Connect" or data.get("name") == "SecretsManager" :
         label += data["aws"]["operation"]
     elif data.get("name") == "DynamoDB":
         label += f"{data["aws"]["operation"]}\n{data["aws"]["table_name"]}"

@@ -87,13 +87,19 @@ convert_to_millis() {
 
 # History 목록 생성 함수
 list_history_files() {
-    find "$VENV_DIR" -type f -name "$env-main_flow_*.dot" | while read -r file; do
-        filename=$(basename "$file")
-        contact_id=${filename#$env-main_flow_}
-        contact_id=${contact_id%.dot}
-        created_time=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$file")  # macOS용
-        echo "$contact_id $created_time"
-    done
+  output=""
+
+  # 파일을 찾고 변수에 저장
+  while IFS= read -r file; do
+      filename=$(basename "$file")
+      contact_id=${filename#$env-main_flow_}
+      contact_id=${contact_id%.dot}
+      created_time=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$file")  # macOS용
+      output+="$contact_id $created_time"$'\n'
+  done < <(find "$VENV_DIR" -type f -name "$env-main_flow_*.dot")
+
+  # 정렬 후 출력 (최신이 맨 위, 마지막 빈 줄 제거)
+  echo -n "$output" | sort -k2,3r
 }
 
 list_contact_flow_lambda_error_list() {
@@ -339,7 +345,65 @@ list_contact_flow_lambda_timeout_list() {
   done
 }
 
+search_contacts(){
+    # 검색 시간 범위 설정 (지난 1일간)
+    start_time=$(date -u -v-1d +"%Y-%m-%dT%H:%M:%SZ")
+    end_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+    # 결과 저장 배열
+    matching_contacts=()
+
+    # 초기 nextToken 없음
+    next_token=""
+
+    while true; do
+        # AWS Connect 검색 명령 실행
+        if [[ -z "$next_token" ]]; then
+            response=$(aws connect search-contacts \
+                --instance-id "$instance_id" \
+                --time-range Type=INITIATION_TIMESTAMP,StartTime="$start_time",EndTime="$end_time" \
+                --max-results 10 | tr -d '\000-\031')
+            sleep 2
+        else
+            response=$(aws connect search-contacts \
+                --instance-id "$instance_id" \
+                --time-range Type=INITIATION_TIMESTAMP,StartTime="$start_time",EndTime="$end_time" \
+                --max-results 10 \
+                --next-token "$next_token" | tr -d '\000-\031')
+            sleep 2
+        fi
+
+        # Contact ID 목록 추출
+        contact_ids=($(echo "$response" | jq -r '.Contacts[].Id'))
+
+        # 각 Contact의 Attributes 확인
+        for contact_id in "${contact_ids[@]}"; do
+
+            attributes=$(aws connect get-contact-attributes --initial-contact-id "$contact_id" --instance-id "$instance_id" | tr -d '\000-\031')
+
+            # ContactFlow 속성 확인
+
+            if echo "$attributes" | grep -q $contact_flow; then
+
+                echo "$contact_id $contact_flow"
+                matching_contacts+=("$contact_id")
+
+                # 매칭된 contact_id가 5개가 되면 즉시 종료
+                if [[ ${#matching_contacts[@]} -ge 5 ]]; then
+                    # echo "Matching Contact IDs (Limit 10)"
+                    # printf "%s\n" "${matching_contacts[@]}"
+                    exit 0
+                fi
+            fi
+        done
+
+        # 다음 페이지의 nextToken 확인
+        next_token=$(echo "$response" | jq -r '.NextToken // empty')
+
+        # 다음 토큰이 없으면 종료
+        [[ -z "$next_token" ]] && break
+    done
+}
 
 # Amazon Connect Instance ID
 instance_id=$(get_instance_id_from_alias "$instance_alias")
@@ -360,9 +424,23 @@ fi
 # fzf를 통한 검색 조건 선택
 
 
-search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError" | fzf --height 7 --prompt "검색할 기준을 선택하세요 (History, Agent, Customer, ContactId):" )
+search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError\nContactFlow" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (ContactFlow, LambdaError, History, Agent, Customer, ContactId):" )
 
 case $search_option in
+  "ContactFlow")
+    echo -e "ContactFlow 명을 입력하세요.(e.g. 대소문자 구분 필요)"
+    # echo -e "Agent ID 또는 Email 입력 시 빠르게 검색할 수 있습니다."
+    read -r -p "❯ " contact_flow
+    echo "입력된 ContactFlow 정보: $contact_flow"
+    contact_ids=$(search_contacts)
+
+    if [ -z "$contact_ids" ]; then
+      echo "❌ 저장된 Contact Flow 기록이 없습니다."
+      exit 1
+    fi
+
+    selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "최근 1일간 Contact Attributes에 기록된 ContactFlow Key 기준으로 조회" | awk '{print $1}')
+    ;;
   "History")
     echo "기록된 Contact Flow 목록을 불러옵니다..."
     contact_ids=$(list_history_files)
