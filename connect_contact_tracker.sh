@@ -124,7 +124,7 @@ list_contact_flow_lambda_error_list() {
 
   # 초기 Insights 쿼리 (ERROR 로그 검색)
   QUERY="fields @timestamp, @message, @logStream, @log
-  | filter @message like '\"level\":\"ERROR\"'
+  | filter @message like '"level":"ERROR"'
   | sort @timestamp desc
   | limit 10000"
 
@@ -388,14 +388,15 @@ search_contacts(){
                 echo "$contact_id $contact_flow"
                 matching_contacts+=("$contact_id")
 
-                # 매칭된 contact_id가 5개가 되면 즉시 종료
-                if [[ ${#matching_contacts[@]} -ge 5 ]]; then
+                # 매칭된 contact_id가 1개가 되면 즉시 종료
+                if [[ ${#matching_contacts[@]} -ge 1 ]]; then
                     # echo "Matching Contact IDs (Limit 10)"
                     # printf "%s\n" "${matching_contacts[@]}"
                     exit 0
                 fi
             fi
         done
+
 
         # 다음 페이지의 nextToken 확인
         next_token=$(echo "$response" | jq -r '.NextToken // empty')
@@ -428,7 +429,7 @@ search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError\nConta
 
 case $search_option in
   "ContactFlow")
-    echo -e "ContactFlow 명을 입력하세요.(e.g. 대소문자 구분 필요)"
+    echo -e "ContactFlow 명을 입력하세요.(e.g. 대소문자 구분 필요, 숫자는 빼고 입력 ex. 05_CustomerQueue -> CustomerQueue)"
     # echo -e "Agent ID 또는 Email 입력 시 빠르게 검색할 수 있습니다."
     read -r -p "❯ " contact_flow
     echo "입력된 ContactFlow 정보: $contact_flow"
@@ -539,7 +540,7 @@ case $search_option in
     ;;
   "LambdaError")
     search_option=$(echo -e "Lambda Error\nTimeout" | fzf --height 7 --prompt "검색할 기준을 선택하세요 (Timeout, Lambda Error):" )
-    if [ $search_option == "Timeout" ]; then
+    if [[ "$search_option" == "Timeout" ]]; then
       echo "⏳ Timeout 탐색 중 입니다..."
       contact_ids=$(list_contact_flow_lambda_timeout_list)
 
@@ -566,6 +567,7 @@ case $search_option in
     exit 1
     ;;
 esac
+
 if [ -z "$selected_contact_id" ]; then
 
   # contact id 리스트를 가져올 때 방식에 차이가 있을 수 있음 
