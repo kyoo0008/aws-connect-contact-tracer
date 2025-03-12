@@ -55,5 +55,5 @@ if __name__ == "__main__":
     if SEARCH_OPTION == "History":
         set_history_window(SELECTED_CONTACT_ID)
     else:
-        dot = build_main_contacts(SELECTED_CONTACT_ID,ASSOCIATED_CONTACTS,INITIATION_TIMESTAMP,REGION,LOG_GROUP)
+        dot = build_main_contacts(SELECTED_CONTACT_ID,ASSOCIATED_CONTACTS,INITIATION_TIMESTAMP,REGION,LOG_GROUP,ENV,INSTANCE_ID)
         save_graph(dot)

@@ -964,7 +964,7 @@ def build_main_flow(logs, lambda_logs, contact_id):
     return main_flow_dot, nodes
 
 # main 화면 생성 
-def build_main_contacts(selected_contact_id,associated_contacts,initiation_timestamp,region,log_group):
+def build_main_contacts(selected_contact_id,associated_contacts,initiation_timestamp,region,log_group,env,instance_id):
 
     dot = Digraph("Amazon Connect Contact Flow", filename="contact_flow.gv")
 
@@ -993,7 +993,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         if not contact_id:
             continue
 
-        logs, lambda_logs = fetch_logs(contact_id,initiation_timestamp,region,log_group)
+        logs, lambda_logs = fetch_logs(contact_id,initiation_timestamp,region,log_group,env,instance_id)
 
         # Graph 생성 시작
         contact_graph, nodes = build_main_flow(logs, lambda_logs, contact_id)

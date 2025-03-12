@@ -12,19 +12,19 @@ from datetime import datetime, timedelta
 
 
 
-# S3 클라이언트 생성
-s3_client = boto3.client('s3', region_name="ap-northeast-2")
-
 log_pattern = re.compile(r"\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}")
 
+region="ap-northeast-2"
 
-
-output_dir = f'./s3/'  # 로컬에 저장할 출력 디렉토리
+output_dir = './s3/'  # 로컬에 저장할 출력 디렉토리
 
 contact_ids = set()
 file_names = set()
 
-def get_contact_timestamp(contact_id,region):
+# S3 클라이언트 생성
+s3_client = boto3.client('s3', region_name="ap-northeast-2")
+
+def get_contact_timestamp(contact_id,region,instance_id,env):
     """AWS Connect Contact Flow 정보를 가져와 JSON 파일로 저장"""
 
     client = boto3.client("connect", region_name=region)
@@ -43,6 +43,7 @@ def get_contact_timestamp(contact_id,region):
 
 # S3에서 Gzip 파일을 다운로드하고 압축을 푼 후 처리하는 함수
 def decompress_gzip_from_s3(bucket_name, s3_key):
+    
     # S3 객체 다운로드
     response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
     gzip_data = response['Body'].read()  # 파일에서 Gzip 바이너리 데이터를 읽어옵니다.
@@ -56,21 +57,16 @@ def decompress_gzip_from_s3(bucket_name, s3_key):
     return decompressed_data
 
 # S3 경로에서 모든 파일을 다운로드하여 처리하는 함수
-def process_s3_files(bucket_name, contact_id, output_dir):
-
+def decompress_datadog_logs(env, contact_id, instance_id):
+    print(contact_id)
+    bucket_name = f"aicc-{env}-an2-s3-adf-datadog-backup"
 
     # 출력 디렉토리가 없으면 생성
     os.makedirs(output_dir, exist_ok=True)
 
     logs = []
 
-    # S3 버킷에서 지정된 경로(prefix)의 객체 목록 가져오기
-    
-    extracted_data = []
-    # 객체 목록을 확인하여 모든 파일에 대해 처리
-    serial_number_set = set()
-
-    initiation_time,disconnect_time = get_contact_timestamp(contact_id,region)
+    initiation_time,disconnect_time = get_contact_timestamp(contact_id,region,instance_id,env)
 
 
     prefix="/".join(str(initiation_time).split(" ")[0].split("-"))
@@ -105,7 +101,7 @@ def process_s3_files(bucket_name, contact_id, output_dir):
         # if "serialNumber" not in decompressed_text: # 키워드 검색
         #     continue
 
-        print(f"Processing file: {key}") 
+        # print(f"Processing file: {key}") 
 
         # with open(f"{output_dir}/{key.split("/")[4]}", "w", encoding="utf-8") as f:
         #     f.write(decompressed_text)
@@ -115,34 +111,37 @@ def process_s3_files(bucket_name, contact_id, output_dir):
         for line in data:
             json_data = json.loads(line)
             try:
-            if contact_id in line and json_data.get("logGroup"):
-                if "/aws/connect/kal-servicecenter" in json_data.get("logGroup"):
-                    for event in json_data['logEvents']:
+                if contact_id in line and json_data.get("logGroup"):
+                    if "/aws/connect/kal-servicecenter" in json_data.get("logGroup"):
+                        for event in json_data['logEvents']:
 
-                        message = json.loads(event.get("message"))
-                        logs.append(message)
-                        if message.get("ContactId"):
-                            contact_ids.add(message.get("ContactId"))
+                            message = json.loads(event.get("message"))
+                            logs.append(message)
+                            if message.get("ContactId"):
+                                contact_ids.add(message.get("ContactId"))
+
 
 
             except Exception as e: 
-            print(e)
+                print(e)
 
     logs = sorted(logs, key=lambda x : x["Timestamp"], reverse=False)
 
     for c_id in contact_ids:
-    c_logs = []
-    for l in logs:
-        if l["ContactId"] == c_id:
-            c_logs.append(l)
 
-    # JSON 파일 저장    
-    output_json_path = f"./virtual_env/contact_flow_{c_id}.json"        
+        c_logs = []
+        for l in logs:
+            if l["ContactId"] == c_id:
+                c_logs.append(l)
 
-    if len(c_logs) > 0:
-        with open(output_json_path, "w", encoding="utf-8") as json_file:
-            json.dump(c_logs, json_file, ensure_ascii=False, indent=4)
-            print(f"{output_json_path} saved!!!")
+        # JSON 파일 저장    
+        output_json_path = f"./virtual_env/contact_flow_{c_id}.json"        
+
+        if len(c_logs) > 0:
+            with open(output_json_path, "w", encoding="utf-8") as json_file:
+                json.dump(c_logs, json_file, ensure_ascii=False, indent=4)
+                print(f"{output_json_path} saved!!!")
+    return logs
 
     
 def single_int_to_str(i):
@@ -151,6 +150,6 @@ def single_int_to_str(i):
 
 
 # S3 경로에서 파일 다운로드 및 처리
-process_s3_files(bucket_name, contact_id, output_dir)
+# decompress_datadog_logs(bucket_name, contact_id)
 
 

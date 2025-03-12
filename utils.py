@@ -13,6 +13,8 @@ from collections import defaultdict
 from describe_flow import get_contact_flow, \
                         get_contact_flow_module
 
+from decompress_datadog_gzip import decompress_datadog_logs
+
 # 그래프에서 한 줄에 표시할 노드 수 
 COLS_NUM = 5
 
@@ -70,7 +72,7 @@ def sanitize_label(label):
     # 유효하지 않은 ASCII 제어 문자 제거 (0x00~0x1F 및 0x7F)
     return re.sub(r'[\x00-\x1F\x7F]', '', label)
 
-def fetch_logs(contact_id, initiation_timestamp, region, log_group):
+def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instance_id):
     cloudwatch_client = boto3.client("logs", region_name=region)
 
     """
