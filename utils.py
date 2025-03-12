@@ -104,7 +104,9 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
         )
     except Exception as e:
         if "MalformedQueryException" in str(e) :
-            print(f"Error : {e}, 1일 전부터 발생한 ContactId 입력 후 조회 가능합니다.")
+            print("1일 전부터 발생한 ContactId 입력 후 현재 Cloudwatch에서 조회 가능합니다. ")
+            print("S3에 백업 된 데이터를 불러옵니다...S3에서 가져온 데이터는 Lambda Xray Trace기능이 없습니다.(추후 개발 예정)")
+            print(f"contact id : {contact_id}")
             datadog_logs, _ = decompress_datadog_logs(env,contact_id,instance_id)
             datadog_logs = generate_node_ids(datadog_logs)
             result_logs = []

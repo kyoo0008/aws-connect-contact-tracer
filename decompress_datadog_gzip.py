@@ -67,29 +67,30 @@ def decompress_datadog_logs(env, contact_id, instance_id):
 
     initiation_time,disconnect_time = get_contact_timestamp(contact_id,region,instance_id)
 
+    prefix_list = set()
+    prefix_list.add("/".join(str(disconnect_time).split(" ")[0].split("-")))
+    prefix_list.add("/".join(str(initiation_time).split(" ")[0].split("-")))
+    # print(contact_id,initiation_time,disconnect_time,prefix)
+    for prefix in prefix_list:
+        response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=prefix)
 
-    prefix="/".join(str(initiation_time).split(" ")[0].split("-"))
+        s3_keys = []
+        for obj in response.get('Contents', []):
+            s3_key = obj['Key']
+            
+            # S3 객체가 Gzip 파일인 경우에만 처리
+            try:
+                match = log_pattern.search(s3_key)
+                if not match:
+                    continue
+                log_time = datetime.strptime(match.group(), "%Y-%m-%d-%H-%M-%S").replace(tzinfo=None)
+
+                if initiation_time <= log_time <= disconnect_time:
+                    s3_keys.append(s3_key)
 
 
-    response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=prefix)
-
-    s3_keys = []
-    for obj in response.get('Contents', []):
-        s3_key = obj['Key']
-        
-        # S3 객체가 Gzip 파일인 경우에만 처리
-        try:
-            match = log_pattern.search(s3_key)
-            if not match:
-                continue
-            log_time = datetime.strptime(match.group(), "%Y-%m-%d-%H-%M-%S").replace(tzinfo=None)
-
-            if initiation_time <= log_time <= disconnect_time:
-                s3_keys.append(s3_key)
-
-
-        except Exception as e:
-            print(f"Skipping non-gzip file {s3_key} : {e}")
+            except Exception as e:
+                print(f"Skipping non-gzip file {s3_key} : {e}")
 
     for key in s3_keys:
     # Gzip 파일을 복원하여 처리

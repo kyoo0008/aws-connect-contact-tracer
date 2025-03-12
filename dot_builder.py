@@ -1003,7 +1003,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
 
     for contact in associated_contacts["ContactSummaryList"]:
         contact_id = contact.get("ContactId")
-        prev_id = contact.get("PreviousContactId")
+        prev_id = contact.get("PreviousContactId") 
         related_id = contact.get("RelatedContactId")
 
         if not contact_id:
@@ -1019,7 +1019,9 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
 
         # prev contact id의 마지막 node -> contact id의 첫번째 노드 edge
         try:
-            if prev_id and prev_id in subgraphs:    
+            if related_id:
+                dot.edge(subgraph_nodes[related_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
+            elif prev_id and prev_id in subgraphs:    
                 dot.edge(subgraph_nodes[prev_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
         except Exception:
             print(traceback.format_exc())
