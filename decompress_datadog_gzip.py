@@ -11,7 +11,6 @@ import datetime
 from datetime import datetime, timedelta
 
 
-
 log_pattern = re.compile(r"\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}")
 
 region="ap-northeast-2"
@@ -24,7 +23,7 @@ file_names = set()
 # S3 클라이언트 생성
 s3_client = boto3.client('s3', region_name="ap-northeast-2")
 
-def get_contact_timestamp(contact_id,region,instance_id,env):
+def get_contact_timestamp(contact_id,region,instance_id):
     """AWS Connect Contact Flow 정보를 가져와 JSON 파일로 저장"""
 
     client = boto3.client("connect", region_name=region)
@@ -58,7 +57,7 @@ def decompress_gzip_from_s3(bucket_name, s3_key):
 
 # S3 경로에서 모든 파일을 다운로드하여 처리하는 함수
 def decompress_datadog_logs(env, contact_id, instance_id):
-    print(contact_id)
+    # print(contact_id)
     bucket_name = f"aicc-{env}-an2-s3-adf-datadog-backup"
 
     # 출력 디렉토리가 없으면 생성
@@ -66,7 +65,7 @@ def decompress_datadog_logs(env, contact_id, instance_id):
 
     logs = []
 
-    initiation_time,disconnect_time = get_contact_timestamp(contact_id,region,instance_id,env)
+    initiation_time,disconnect_time = get_contact_timestamp(contact_id,region,instance_id)
 
 
     prefix="/".join(str(initiation_time).split(" ")[0].split("-"))
@@ -141,7 +140,7 @@ def decompress_datadog_logs(env, contact_id, instance_id):
             with open(output_json_path, "w", encoding="utf-8") as json_file:
                 json.dump(c_logs, json_file, ensure_ascii=False, indent=4)
                 print(f"{output_json_path} saved!!!")
-    return logs
+    return logs, [] # To-do : Lambda Logs
 
     
 def single_int_to_str(i):

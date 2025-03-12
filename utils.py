@@ -105,6 +105,31 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
     except Exception as e:
         if "MalformedQueryException" in str(e) :
             print(f"Error : {e}, 1일 전부터 발생한 ContactId 입력 후 조회 가능합니다.")
+            datadog_logs, _ = decompress_datadog_logs(env,contact_id,instance_id)
+            datadog_logs = generate_node_ids(datadog_logs)
+            result_logs = []
+            contact_flow_ids = set()
+
+            for json_value in datadog_logs:
+                
+                # 제외 contact flow 건너뛰기 
+                if json_value.get("ContactFlowName") not in EXCEPT_CONTACT_FLOW_NAME: 
+                    result_logs.append(json_value)
+                    contact_flow_ids.add(json_value.get("ContactFlowId"))
+
+            for contact_flow_id in contact_flow_ids:
+                if 'contact-flow' in contact_flow_id:
+                    jsonfile_name = f"./virtual_env/describe_contact_flow_{contact_flow_id}.json"
+
+                    if not os.path.isfile(jsonfile_name):
+                        get_contact_flow(contact_flow_id, region)
+                elif 'flow-module' in contact_flow_id:
+                    jsonfile_name = f"./virtual_env/describe_flow_module_{contact_flow_id}.json"
+
+                    if not os.path.isfile(jsonfile_name):
+                        get_contact_flow_module(contact_flow_id, region)
+
+            return datadog_logs, []
         else:
             print(f"Error : {e}")
         sys.exit(1)

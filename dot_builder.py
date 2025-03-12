@@ -305,7 +305,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
     check_log = None
     # AWS Lambda Xray trace 추적
-    if module_type == "InvokeExternalResource":
+    if module_type == "InvokeExternalResource" and len(lambda_logs) > 0:
         function_name = get_func_name(log.get("Parameters")["FunctionArn"])
         try:
 
