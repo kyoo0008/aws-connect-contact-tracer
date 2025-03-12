@@ -175,9 +175,6 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group):
     except Exception as e:
         print('')
 
-    # with open(f"./virtual_env/lambda_logs_{contact_id}.json", "w", encoding="utf-8") as json_file:
-    #         json.dump(lambda_logs, json_file, ensure_ascii=False, indent=4)
-
     return logs, lambda_logs
 
 # flow-internal-handler
@@ -232,15 +229,6 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
 
 
     logs = filter_lambda_logs(response)
-
-    
-
-        # JSON 파일 저장    
-        # output_json_path = f"./virtual_env/{log_group.split("/")[4]}_{contact_id}.json"
-        # with open(output_json_path, "w", encoding="utf-8") as json_file:
-        #     json.dump(logs, json_file, ensure_ascii=False, indent=4)
-
-        # print(f"JSON 파일이 저장되었습니다: {output_json_path}")
 
     return logs
 
