@@ -32,8 +32,9 @@ def check_json_file_exists(directory):
         return False
 
 # Util
-def generate_node_ids(logs):
-    logs.sort(key=lambda log: log['Timestamp'])  # timestamp 기준 정렬
+def generate_node_ids(logs,sort=True):
+    if sort:
+        logs.sort(key=lambda log: log['Timestamp'])  # timestamp 기준 정렬
     flow_indices = defaultdict(int)
     last_flow_name = None  # 마지막 유효한 Entry 노드의 flow_name 저장
     last_node_id = None  # 마지막 Entry 기반 node_id 저장
@@ -41,7 +42,6 @@ def generate_node_ids(logs):
     for log in logs:
         flow_name = log['ContactFlowName']
 
-        # if last_flow_name and ((flow_name.startswith("MOD_") or flow_name.startswith("99_MOD_")) or flow_name == last_flow_name):
         if last_flow_name and ("MOD_" in flow_name or flow_name == last_flow_name):
             # MOD_ 또는 이전과 동일한 Entry라면 같은 node_id 유지
             log['node_id'] = last_node_id
@@ -108,14 +108,14 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
             print("S3에 백업 된 데이터를 불러옵니다...S3에서 가져온 데이터는 Lambda Xray Trace기능이 없습니다.(추후 개발 예정)")
             print(f"contact id : {contact_id}")
             datadog_logs, _ = decompress_datadog_logs(env,contact_id,instance_id)
-            datadog_logs = generate_node_ids(datadog_logs)
+            datadog_logs = generate_node_ids(datadog_logs, False)
             result_logs = []
             contact_flow_ids = set()
 
             for json_value in datadog_logs:
                 
                 # 제외 contact flow 건너뛰기 
-                if json_value.get("ContactFlowName") not in EXCEPT_CONTACT_FLOW_NAME: 
+                if json_value.get("ContactFlowName") not in EXCEPT_CONTACT_FLOW_NAME and json_value.get("ContactId") == contact_id: 
                     result_logs.append(json_value)
                     contact_flow_ids.add(json_value.get("ContactFlowId"))
 

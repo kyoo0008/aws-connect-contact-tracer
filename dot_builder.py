@@ -1020,7 +1020,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         # prev contact id의 마지막 node -> contact id의 첫번째 노드 edge
         try:
             if related_id:
-                dot.edge(subgraph_nodes[related_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
+                dot.edge(subgraph_nodes[related_id][-1], subgraph_nodes[contact_id][0], label="Related", dir="none") 
             elif prev_id and prev_id in subgraphs:    
                 dot.edge(subgraph_nodes[prev_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
         except Exception:

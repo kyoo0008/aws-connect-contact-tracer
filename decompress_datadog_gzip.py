@@ -33,8 +33,8 @@ def get_contact_timestamp(contact_id,region,instance_id):
         ContactId=contact_id
     )
 
-    # init -10분, disconnect +10분
-    initiation_time = datetime.fromisoformat(str(response["Contact"]["InitiationTimestamp"])).astimezone(pytz.UTC) - timedelta(minutes=10)
+    # init -1분, disconnect +10분
+    initiation_time = datetime.fromisoformat(str(response["Contact"]["InitiationTimestamp"])).astimezone(pytz.UTC) - timedelta(minutes=1)
     disconnect_time = datetime.fromisoformat(str(response["Contact"]["DisconnectTimestamp"])).astimezone(pytz.UTC) + timedelta(minutes=10)
 
     return initiation_time.replace(tzinfo=None),disconnect_time.replace(tzinfo=None)
@@ -116,31 +116,25 @@ def decompress_datadog_logs(env, contact_id, instance_id):
                         for event in json_data['logEvents']:
 
                             message = json.loads(event.get("message"))
-                            logs.append(message)
-                            if message.get("ContactId"):
-                                contact_ids.add(message.get("ContactId"))
+                            if message.get("ContactId") == contact_id:
+                                logs.append(message)
+                            # :
+                            #     contact_ids.add(message.get("ContactId"))
 
 
 
             except Exception as e: 
                 print(e)
 
-    logs = sorted(logs, key=lambda x : x["Timestamp"], reverse=False)
+    logs = sorted(logs, key=lambda x : x["Timestamp"], reverse=False) # To-do : Timestamp 순이 아니라 다른 방식으로 정렬해야 할듯
+    
+    # JSON 파일 저장    
+    output_json_path = f"./virtual_env/contact_flow_{contact_id}.json"        
 
-    for c_id in contact_ids:
-
-        c_logs = []
-        for l in logs:
-            if l["ContactId"] == c_id:
-                c_logs.append(l)
-
-        # JSON 파일 저장    
-        output_json_path = f"./virtual_env/contact_flow_{c_id}.json"        
-
-        if len(c_logs) > 0:
-            with open(output_json_path, "w", encoding="utf-8") as json_file:
-                json.dump(c_logs, json_file, ensure_ascii=False, indent=4)
-                print(f"{output_json_path} saved!!!")
+    if len(logs) > 0:
+        with open(output_json_path, "w", encoding="utf-8") as json_file:
+            json.dump(logs, json_file, ensure_ascii=False, indent=4)
+            print(f"{output_json_path} saved!!!")
     return logs, [] # To-do : Lambda Logs
 
     
