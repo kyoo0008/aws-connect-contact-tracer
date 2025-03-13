@@ -302,13 +302,14 @@ def get_xray_trace(trace_id, region="ap-northeast-2"):
             f.close()
 
         
-        dynamodb_traces = [
+        traces = [
             json.loads(segment["Document"])
             for trace in data.get("Traces", [])
             for segment in trace.get("Segments", [])
-            if "Document" in segment and "DynamoDB" in json.loads(segment["Document"]).get("name", "")
+            if "Document" in segment 
+            # and "DynamoDB" in json.loads(segment["Document"]).get("name", "")
         ]
-        return dynamodb_traces
+        return traces
     except json.JSONDecodeError:
         return {"error": "Invalid JSON response from AWS CLI"}
 

@@ -302,8 +302,8 @@ search_contacts(){
                 echo "$contact_id $contact_flow"
                 matching_contacts+=("$contact_id")
 
-                # 매칭된 contact_id가 1개가 되면 즉시 종료
-                if [[ ${#matching_contacts[@]} -ge 1 ]]; then
+                # 매칭된 contact_id가 3개가 되면 즉시 종료
+                if [[ ${#matching_contacts[@]} -ge $contact_search_count ]]; then
                     # echo "Matching Contact IDs (Limit 10)"
                     # printf "%s\n" "${matching_contacts[@]}"
                     exit 0
@@ -347,6 +347,10 @@ case $search_option in
     # echo -e "Agent ID 또는 Email 입력 시 빠르게 검색할 수 있습니다."
     read -r -p "❯ " contact_flow
     echo "입력된 ContactFlow 정보: $contact_flow"
+
+    echo -e "\n검색할 contact의 수를 선택하세요(1~5, 숫자가 작을수록 검색 속도가 빨라집니다.)"
+    read -r -p "❯ " contact_search_count
+
     contact_ids=$(search_contacts)
 
     if [ -z "$contact_ids" ]; then

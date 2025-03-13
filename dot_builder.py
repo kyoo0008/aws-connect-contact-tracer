@@ -378,7 +378,6 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
             if target_logs: # x-ray 추적 처리 
                 xray_trace_id = xid
 
-                # To-do : xray response
                 xray_trace = get_xray_trace(xray_trace_id)
                 xray_text = ""
                 if len(xray_trace) > 0:
@@ -386,12 +385,14 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                     last_op = None
                     index = 1
                     for t in xray_trace:
-                        try:
-                            op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
-                        except KeyError:
-                            op = t["aws"]["operation"] + '\n'
-                        except Exception as e:
-                            print(e,xray_trace)
+                        # print(t)
+                        op = None 
+                        if t.get("aws"):
+                            if t["aws"].get("operation"):
+                                if len(t["aws"].get("resource_names",[])) > 0:
+                                    op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
+                                else:
+                                    op = t["aws"]["operation"] + " " + t["name"] + '\n'
 
                         if op != last_op:
                             xray_text += f"Operation {index} : \n" + op
@@ -531,10 +532,6 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
         
         for xray_batch_json_data in xray_batch_json_data_list:
 
-            # parent_data = [l for l in xray_batch_json_data_list if xray_batch_json_data.get("parent_id") == l.get("id")]
-            # if len(parent_data) > 0 and parent_data[0].get("name") == xray_batch_json_data.get("name"):
-            #     continue
-
             xray_dot = process_subsegments(xray_dot,xray_batch_json_data) 
             
             origin = xray_batch_json_data.get("origin","")
@@ -563,14 +560,9 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
                 if parent_id:
                     xray_dot.edge(parent_id, xray_batch_json_data.get("id"))
 
-                # if xray_batch_json_data.get("parent_id"):
-                #     xray_dot.edge(xray_batch_json_data.get("parent_id"),xray_batch_json_data.get("id"))
-
     xray_nodes=[]
     if len(associated_lambda_logs) > 0:
-        
-        
-
+                
         for index,l in enumerate(associated_lambda_logs):
 
             color = 'tomato' if l.get("level") == "ERROR" or l.get("level") == "WARN" else 'lightgray'
@@ -895,71 +887,71 @@ def build_main_flow(logs, lambda_logs, contact_id):
     apply_rank(main_flow_dot, nodes)
 
 
-    # if error
-    if_error_xray_path=f"./virtual_env/{contact_id}/if-error-xray-trace"
+    # # if error
+    # if_error_xray_path=f"./virtual_env/{contact_id}/if-error-xray-trace"
 
-    if check_json_file_exists(if_error_xray_path):
-        for filename in os.listdir(if_error_xray_path):
-            xray_trace_id = filename.replace(".json","")
-            associated_lambda_logs ={}
-            with open(if_error_xray_path+"/"+filename, 'r', encoding='utf-8') as file:
-                associated_lambda_logs = filter_lambda_logs(json.loads(file.read()))
+    # if check_json_file_exists(if_error_xray_path):
+    #     for filename in os.listdir(if_error_xray_path):
+    #         xray_trace_id = filename.replace(".json","")
+    #         associated_lambda_logs ={}
+    #         with open(if_error_xray_path+"/"+filename, 'r', encoding='utf-8') as file:
+    #             associated_lambda_logs = filter_lambda_logs(json.loads(file.read()))
 
-            xray_trace = get_xray_trace(xray_trace_id)
-            xray_text = ""
-            if len(xray_trace) > 0:
-                # print(f"xray_trace : {xray_trace}")
-                last_op = None
-                index = 1
-                for t in xray_trace:
-                    try:
-                        op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
-                    except KeyError:
-                        op = t["aws"]["operation"] + '\n'
-                    except Exception as e:
-                        print(e,xray_trace)
+    #         xray_trace = get_xray_trace(xray_trace_id)
+    #         xray_text = ""
+    #         if len(xray_trace) > 0:
+    #             # print(f"xray_trace : {xray_trace}")
+    #             last_op = None
+    #             index = 1
+    #             for t in xray_trace:
+    #                 try:
+    #                     op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
+    #                 except KeyError:
+    #                     op = t["aws"]["operation"] + '\n'
+    #                 except Exception as e:
+    #                     print(e,xray_trace)
 
-                    if op != last_op:
-                        xray_text += f"Operation {index} : \n" + op
-                        last_op = op
-                        index += 1
+    #                 if op != last_op:
+    #                     xray_text += f"Operation {index} : \n" + op
+    #                     last_op = op
+    #                     index += 1
 
-            xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs)
+    #         xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs)
 
-            # level 값 가져오기
-            levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
-            l_warn_count = 0
-            l_error_count = 0
-            for l in levels:
-                if l == "ERROR":
-                    l_error_count += 1
-                elif l == "WARN":
-                    l_warn_count += 1
+    #         # level 값 가져오기
+    #         levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
+    #         l_warn_count = 0
+    #         l_error_count = 0
+    #         for l in levels:
+    #             if l == "ERROR":
+    #                 l_error_count += 1
+    #             elif l == "WARN":
+    #                 l_warn_count += 1
                     
-            color = 'tomato' if l_error_count > 0 or l_warn_count > 0 else 'lightgray'
-            lambda_node_footer = ((f"Warn : {l_warn_count}\n" if l_warn_count > 0 else "") + (f"Error : {l_error_count}" if l_error_count > 0 else "")) if l_error_count > 0 or l_warn_count > 0 else None
-            node_id = f"{log.get("Timestamp").replace(":","").replace(".","")}_{xray_trace_id}"
+    #         color = 'tomato' if l_error_count > 0 or l_warn_count > 0 else 'lightgray'
+    #         lambda_node_footer = ((f"Warn : {l_warn_count}\n" if l_warn_count > 0 else "") + (f"Error : {l_error_count}" if l_error_count > 0 else "")) if l_error_count > 0 or l_warn_count > 0 else None
+    #         node_id = f"{log.get("Timestamp").replace(":","").replace(".","")}_{xray_trace_id}"
 
-            # 노드 추가
-            main_flow_dot.node(
-                node_id,
-                label=get_node_label(
-                    "xray",
-                    "(Interface) " + get_module_name_ko("xray", log) + "  ➡️",
-                    xray_text,
-                    lambda_node_footer,
-                    xray_trace_id
-                ),
-                shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
-                style='rounded,filled',
-                color=color,
-                URL=f"{xray_trace_file}.dot"
-            )
+    #         # 노드 추가
+    #         main_flow_dot.node(
+    #             node_id,
+    #             label=get_node_label(
+    #                 "xray",
+    #                 "(Interface) " + get_module_name_ko("xray", log) + "  ➡️",
+    #                 xray_text,
+    #                 lambda_node_footer,
+    #                 xray_trace_id
+    #             ),
+    #             shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
+    #             style='rounded,filled',
+    #             color=color,
+    #             URL=f"{xray_trace_file}.dot"
+    #         )
 
-            nodes.append(node_id)
+    #         nodes.append(node_id)
 
-            if l_error_count > 0 or l_warn_count > 0:
-                error_count += (l_error_count+l_warn_count)
+    #         if l_error_count > 0 or l_warn_count > 0:
+    #             error_count += (l_error_count+l_warn_count)
 
     return main_flow_dot, nodes
 
@@ -1019,7 +1011,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
 
         # prev contact id의 마지막 node -> contact id의 첫번째 노드 edge
         try:
-            if related_id:
+            if related_id and len(subgraph_nodes[related_id]) > 0 and len(subgraph_nodes[contact_id]):
                 dot.edge(subgraph_nodes[related_id][-1], subgraph_nodes[contact_id][0], label="Related", dir="none") 
             elif prev_id and prev_id in subgraphs:    
                 dot.edge(subgraph_nodes[prev_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
