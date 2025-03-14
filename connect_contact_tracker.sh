@@ -223,18 +223,29 @@ list_contact_flow_lambda_timeout_list() {
   # 로그 그룹 배열
   LOG_GROUPS=(
       "/aws/connect/$instance_alias"
+      "/aws/lmd/aicc-connect-flow-base/flow-idnv-async-if"
   )
 
-  # timed out 로그를 찾기 위한 쿼리
-  TIMEOUT_QUERY="fields @timestamp, @message, @logStream, @log
-  | filter @message like 'The Lambda Function Returned An Error'
-  | sort @timestamp desc
-  | limit 10000"
+  
 
   # 실행 결과 저장
   RESULTS=""
 
   for LOG_GROUP in "${LOG_GROUPS[@]}"; do
+
+      # timed out 로그를 찾기 위한 쿼리
+      if [ "$LOG_GROUP" == "/aws/lmd/aicc-connect-flow-base/flow-idnv-async-if" ]; then
+        TIMEOUT_QUERY="fields @timestamp, @message, @logStream, @log
+        | filter @message like '"level":"ERROR"'
+        | sort @timestamp desc
+        | limit 10000"
+      else
+        TIMEOUT_QUERY="fields @timestamp, @message, @logStream, @log
+        | filter @message like 'The Lambda Function Returned An Error'
+        | sort @timestamp desc
+        | limit 10000"
+      fi
+
       TIMEOUT_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$TIMEOUT_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
 
       # 쿼리 실행 후 대기

@@ -459,9 +459,12 @@ def get_segment_node(xray_dot,subdata,parent_id):
     else:
         xray_dot.node(subdata.get("id"), label=subdata.get("name",""), image=f"{os.getcwd()}/mnt/aws/settings.png", URL=json.dumps(subdata, indent=2, ensure_ascii=False))
         
-    label = get_xray_edge_label(subdata)
+    label, xlabel = get_xray_edge_label(subdata)
     if label != "":
-        xray_dot.edge(parent_id+":e",subdata.get("id")+":w",headlabel=get_xray_edge_label(subdata),minlen="2")
+        if xlabel == "":
+            xray_dot.edge(parent_id+":e",subdata.get("id")+":w",headlabel=label,minlen="2")
+        else:
+            xray_dot.edge(parent_id+":e",subdata.get("id")+":w",headlabel=label,minlen="2",xlabel=xlabel, color='tomato', fontcolor='tomato')
     else:
         xray_dot.edge(parent_id+":e",subdata.get("id")+":w")
     return xray_dot
@@ -487,6 +490,7 @@ def process_subsegments(xray_dot, json_data):
 def get_xray_edge_label(data):
 
     label = ""
+    xlabel = ""
 
     if data.get("name") == "SSM" or data.get("name") == "Connect" or data.get("name") == "SecretsManager" :
         label += data["aws"]["operation"]
@@ -497,8 +501,15 @@ def get_xray_edge_label(data):
             label += f"{data["aws"]["operation"]}"
     elif "." in data.get("name"):
         label += f"{data["http"]["request"]["method"]}\n{"/".join(data["http"]["request"]["url"].split("/")[3:])}"
+        if data["http"].get("response"):
+            if not str(data["http"]["response"]["status"]).startswith("2"):
+                xlabel = str(data["http"]["response"]["status"])
+        elif data.get("cause"):
+            if data["cause"].get("exceptions"):
+                xlabel = data["cause"]["exceptions"][0]["message"]
 
-    return label
+
+    return label, xlabel
 
 def get_xray_parent_id(parent_id, xray_data):
 
