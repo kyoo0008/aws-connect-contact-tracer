@@ -54,6 +54,17 @@ if ! brew list gtk+3 &> /dev/null; then
         exit 1
     fi
 fi
+# AWS Profile 값 확인
+profile_value=$(aws configure list | awk '/profile/ {print $2}')
+
+if [[ "$profile_value" == "<not" ]]; then
+  echo "⚠️  AWS CLI에서 Profile이 설정되지 않았습니다!"
+  echo "👉 'aws configure set profile <your-profile>' 또는 환경 변수 설정을 확인하세요."
+  exit 1
+else
+  echo "✅ AWS Profile이 설정되었습니다: $profile_value"
+fi
+
 
 # AWS SSO 로그인 상태 확인
 aws sts get-caller-identity >/dev/null 2>&1
@@ -350,7 +361,8 @@ fi
 # fzf를 통한 검색 조건 선택
 
 
-search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError\nContactFlow" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (ContactFlow, LambdaError, History, Agent, Customer, ContactId):" )
+# search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError\nContactFlow" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (ContactFlow, LambdaError, History, Agent, Customer, ContactId):" )
+search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (LambdaError, History, Agent, Customer, ContactId):" )
 
 case $search_option in
   "ContactFlow")

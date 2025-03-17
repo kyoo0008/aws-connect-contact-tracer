@@ -344,19 +344,19 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
                         
                         func_param = {}
                         log_param = sorted(log_parameters.items())
+                        if l.get("event"):
+                            func_param = l["event"]["Details"]["Parameters"]
+                            log_param = log_parameters
 
-                        func_param = l["event"]["Details"]["Parameters"]
-                        log_param = log_parameters
+                            if None != func_param.get('varsConfig') and None != log_param.get('varsConfig'):
+                                del func_param['varsConfig']
+                                del log_param['varsConfig']
 
-                        if None != func_param.get('varsConfig') and None != log_param.get('varsConfig'):
-                            del func_param['varsConfig']
-                            del log_param['varsConfig']
-
-                        func_param = json.dumps(func_param,sort_keys=True)
-                        log_param = json.dumps(log_param,sort_keys=True)
-                        
-                        if log_param == func_param:
-                            target_logs.append(l)
+                            func_param = json.dumps(func_param,sort_keys=True)
+                            log_param = json.dumps(log_param,sort_keys=True)
+                            
+                            if log_param == func_param:
+                                target_logs.append(l)
                         
                     
 
@@ -1022,9 +1022,9 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
 
         # prev contact id의 마지막 node -> contact id의 첫번째 노드 edge
         try:
-            if related_id and len(subgraph_nodes[related_id]) > 0 and len(subgraph_nodes[contact_id]):
+            if related_id and len(subgraph_nodes[related_id]) > 0 and len(subgraph_nodes[contact_id]) > 0:
                 dot.edge(subgraph_nodes[related_id][-1], subgraph_nodes[contact_id][0], label="Related", dir="none") 
-            elif prev_id and prev_id in subgraphs:    
+            elif prev_id and prev_id in subgraphs:
                 dot.edge(subgraph_nodes[prev_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
         except Exception:
             print(traceback.format_exc())
