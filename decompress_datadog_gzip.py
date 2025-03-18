@@ -63,6 +63,7 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
 
     # 출력 디렉토리가 없으면 생성
     # os.makedirs(output_dir, exist_ok=True)
+    s3_client = boto3.client('s3', region_name=region)
 
     logs = []
 
