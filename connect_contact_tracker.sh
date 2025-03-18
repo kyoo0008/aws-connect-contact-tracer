@@ -143,11 +143,11 @@ list_contact_flow_lambda_error_list() {
   RESULTS=""
 
   for LOG_GROUP in "${LOG_GROUPS[@]}"; do
-      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
 
       # 쿼리 실행 후 대기
       while true; do
-          STATUS=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+          STATUS=$(aws logs get-query-results --query-id "$QUERY_ID" --region $region --query 'status' --output text)
           if [ "$STATUS" == "Complete" ]; then
               break
           fi
@@ -155,7 +155,7 @@ list_contact_flow_lambda_error_list() {
       done
 
       # 첫 번째 검색 결과 가져오기
-      RESPONSE=$(aws logs get-query-results --query-id "$QUERY_ID" --region ap-northeast-2 --output json)
+      RESPONSE=$(aws logs get-query-results --query-id "$QUERY_ID" --region $region --output json)
 
       # ContactId 추출
       CONTACT_INFO=$(echo "$RESPONSE" | jq -r '
@@ -185,17 +185,17 @@ list_contact_flow_lambda_error_list() {
               | sort @timestamp desc
               | limit 10000"
 
-              SECOND_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$SECOND_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+              SECOND_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$SECOND_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
 
               while true; do
-                  SECOND_STATUS=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+                  SECOND_STATUS=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region $region --query 'status' --output text)
                   if [ "$SECOND_STATUS" == "Complete" ]; then
                       break
                   fi
                   sleep 2
               done
 
-              SECOND_RESPONSE=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region ap-northeast-2 --output json)
+              SECOND_RESPONSE=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region $region --output json)
 
               # ContactId 재추출
               SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
@@ -257,18 +257,18 @@ list_contact_flow_lambda_timeout_list() {
         | limit 10000"
       fi
 
-      TIMEOUT_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$TIMEOUT_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region ap-northeast-2 --query 'queryId' --output text)
+      TIMEOUT_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$TIMEOUT_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
 
       # 쿼리 실행 후 대기
       while true; do
-          STATUS=$(aws logs get-query-results --query-id "$TIMEOUT_QUERY_ID" --region ap-northeast-2 --query 'status' --output text)
+          STATUS=$(aws logs get-query-results --query-id "$TIMEOUT_QUERY_ID" --region $region --query 'status' --output text)
           if [ "$STATUS" == "Complete" ]; then
               break
           fi
           sleep 2
       done
 
-      TIMEOUT_RESPONSE=$(aws logs get-query-results --query-id "$TIMEOUT_QUERY_ID" --region ap-northeast-2 --output json)
+      TIMEOUT_RESPONSE=$(aws logs get-query-results --query-id "$TIMEOUT_QUERY_ID" --region $region --output json)
 
       echo "$TIMEOUT_RESPONSE" | jq -r '
         .results[] |
@@ -282,64 +282,51 @@ list_contact_flow_lambda_timeout_list() {
 }
 
 search_contacts(){
-    # 검색 시간 범위 설정 (지난 1일간)
-    start_time=$(date -u -v-1d +"%Y-%m-%dT%H:%M:%SZ")
-    end_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # 결과 저장 배열
-    matching_contacts=()
+    # 로그 그룹 배열
+  LOG_GROUPS=(
+      "/aws/connect/$instance_alias"
+  )
 
-    # 초기 nextToken 없음
-    next_token=""
+  # 실행 결과 저장
+  RESULTS=""
 
-    while true; do
-        # AWS Connect 검색 명령 실행
-        if [[ -z "$next_token" ]]; then
-            response=$(aws connect search-contacts \
-                --instance-id "$instance_id" \
-                --time-range Type=INITIATION_TIMESTAMP,StartTime="$start_time",EndTime="$end_time" \
-                --max-results 10 | tr -d '\000-\031')
-            sleep 2
-        else
-            response=$(aws connect search-contacts \
-                --instance-id "$instance_id" \
-                --time-range Type=INITIATION_TIMESTAMP,StartTime="$start_time",EndTime="$end_time" \
-                --max-results 10 \
-                --next-token "$next_token" | tr -d '\000-\031')
-            sleep 2
-        fi
+  for LOG_GROUP in "${LOG_GROUPS[@]}"; do
+      if [[ ! -z "$dnis" ]]; then
+        QUERY="fields @timestamp, @message, @logStream, @log
+        | filter @message like '$dnis' and @message like 'SetAttributes'
+        | sort @timestamp desc
+        | limit 10000"
+      else
+        QUERY="fields @timestamp, @message, @logStream, @log
+        | filter ContactFlowName like '$contact_flow'
+        | sort @timestamp desc
+        | limit 10000"
+      fi
 
-        # Contact ID 목록 추출
-        contact_ids=($(echo "$response" | jq -r '.Contacts[].Id'))
+      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
 
-        # 각 Contact의 Attributes 확인
-        for contact_id in "${contact_ids[@]}"; do
+      # 쿼리 실행 후 대기
+      while true; do
+          STATUS=$(aws logs get-query-results --query-id "$QUERY_ID" --region $region --query 'status' --output text)
+          if [ "$STATUS" == "Complete" ]; then
+              break
+          fi
+          sleep 2
+      done
 
-            attributes=$(aws connect get-contact-attributes --initial-contact-id "$contact_id" --instance-id "$instance_id" | tr -d '\000-\031')
+      RESPONSE=$(aws logs get-query-results --query-id "$QUERY_ID" --region $region --output json)
 
-            # ContactFlow 속성 확인
+      echo "$RESPONSE" | jq -r '
+        .results[] |
+          {
+            timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
+            message: (map(select(.field == "@message"))[0].value | fromjson)
+          } | select(.message.ContactId) | "\(.message.ContactId) \(.timestamp)"
+        '| sort -k2 -r | awk '!seen[$1]++'
+      
+  done
 
-            if echo "$attributes" | grep -q $contact_flow; then
-
-                echo "$contact_id $contact_flow"
-                matching_contacts+=("$contact_id")
-
-                # 매칭된 contact_id가 3개가 되면 즉시 종료
-                if [[ ${#matching_contacts[@]} -ge $contact_search_count ]]; then
-                    # echo "Matching Contact IDs (Limit 10)"
-                    # printf "%s\n" "${matching_contacts[@]}"
-                    exit 0
-                fi
-            fi
-        done
-
-
-        # 다음 페이지의 nextToken 확인
-        next_token=$(echo "$response" | jq -r '.NextToken // empty')
-
-        # 다음 토큰이 없으면 종료
-        [[ -z "$next_token" ]] && break
-    done
 }
 
 # Amazon Connect Instance ID
@@ -352,27 +339,18 @@ else
 fi
 
 
-# echo -e "\n2. Amazon Connect Contact Id를 입력하거나 Enter를 눌러 선택 메뉴를 사용하세요."
-# read -r -p "❯ " selected_contact_id
-
-# if [ -z "$selected_contact_id" ]; then
-
-
 # fzf를 통한 검색 조건 선택
-
-
-# search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError\nContactFlow" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (ContactFlow, LambdaError, History, Agent, Customer, ContactId):" )
-search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (LambdaError, History, Agent, Customer, ContactId):" )
+search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError\nContactFlow\nDNIS" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (DNIS, ContactFlow, LambdaError, History, Agent, Customer, ContactId):" )
+# search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (LambdaError, History, Agent, Customer, ContactId):" )
 
 case $search_option in
   "ContactFlow")
-    echo -e "ContactFlow 명을 입력하세요.(e.g. 대소문자 구분 필요, 숫자는 빼고 입력 ex. 05_CustomerQueue -> CustomerQueue)"
-    # echo -e "Agent ID 또는 Email 입력 시 빠르게 검색할 수 있습니다."
-    read -r -p "❯ " contact_flow
-    echo "입력된 ContactFlow 정보: $contact_flow"
+    echo -e "ContactFlow 명을 입력하세요.(e.g. 대소문자 구분 필요 ex. 05_CustomerQueue)"
 
-    echo -e "\n검색할 contact의 수를 선택하세요(1~5, 숫자가 작을수록 검색 속도가 빨라집니다.)"
-    read -r -p "❯ " contact_search_count
+    read -r -p "❯ " contact_flow
+
+    echo "⏳ 입력된 ContactFlowName $contact_flow 로 Contact을 탐색 중 입니다..."
+
 
     contact_ids=$(search_contacts)
 
@@ -381,7 +359,7 @@ case $search_option in
       exit 1
     fi
 
-    selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "최근 1일간 Contact Attributes에 기록된 ContactFlow Key 기준으로 조회" | awk '{print $1}')
+    selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "최근 1일간 ContactFlowName 기준으로 조회" | awk '{print $1}')
     ;;
   "History")
     echo "기록된 Contact Flow 목록을 불러옵니다..."
@@ -502,6 +480,22 @@ case $search_option in
 
       selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
     fi
+    ;;
+  "DNIS")
+    echo -e "DNIS를 입력하세요.(e.g. E.164 포맷 ex. +82269269240)"
+
+    read -r -p "❯ " dnis
+    echo "⏳ 입력된 DNIS $dnis 로 Contact을 탐색 중 입니다..."
+
+
+    contact_ids=$(search_contacts)
+
+    if [ -z "$contact_ids" ]; then
+      echo "❌ 저장된 Contact Flow 기록이 없습니다."
+      exit 1
+    fi
+
+    selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "최근 1일간 DNIS 기준으로 조회" | awk '{print $1}')
     ;;
   *)
     echo "올바른 옵션을 선택하세요."

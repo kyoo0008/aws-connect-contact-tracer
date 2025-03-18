@@ -6,3 +6,4 @@ pycairo
 PyGObject
 packaging
 numpy
+fzf.py

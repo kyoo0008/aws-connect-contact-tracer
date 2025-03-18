@@ -61,7 +61,7 @@ def decompress_datadog_logs(env, contact_id, instance_id):
     bucket_name = f"aicc-{env}-an2-s3-adf-datadog-backup"
 
     # 출력 디렉토리가 없으면 생성
-    os.makedirs(output_dir, exist_ok=True)
+    # os.makedirs(output_dir, exist_ok=True)
 
     logs = []
 
