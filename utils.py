@@ -272,7 +272,7 @@ def filter_lambda_logs(response):
 
     return logs
 
-def get_xray_trace(trace_id, region="ap-northeast-2"):
+def get_xray_trace(trace_id, region):
     # AWS CLI 명령어 실행
     cmd = [
         "aws", "xray", "batch-get-traces",

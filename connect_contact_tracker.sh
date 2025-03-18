@@ -56,7 +56,7 @@ if ! brew list gtk+3 &> /dev/null; then
 fi
 # AWS Profile 값 확인
 profile_value=$(aws configure list | awk '/profile/ {print $2}')
-
+region_value=$(aws configure list | awk '/region/ {print $2}')
 if [[ "$profile_value" == "<not" ]]; then
   echo "⚠️  AWS CLI에서 Profile이 설정되지 않았습니다!"
   echo "👉 'aws configure set profile <your-profile>' 또는 환경 변수 설정을 확인하세요."
@@ -75,15 +75,27 @@ else
   exit 1
 fi
 
-# AWS 계정 ID 확인 및 instance alias 자동 설정
-account_id=$(aws sts get-caller-identity --query "Account" --output text)
-case "$account_id" in
-  "590183945142") instance_alias="kal-servicecenter" && region="ap-northeast-2" && env=prd;;
-  "637423289860") instance_alias="kal-servicecenter-dev" && region="ap-northeast-2" && env=dev;;
-  "637423576272") instance_alias="kal-servicecenter-stg" && region="ap-northeast-2" && env=stg;;
-  # "009160043124") instance_alias="hist-aicc-test-1" && region="us-east-1";;
-  *) echo "❌ 지원되지 않는 AWS 계정 ID: $account_id" && exit 1 ;;
-esac
+if [[ $region_value == "ap-northeast-2" ]]; then
+  # AWS 계정 ID 확인 및 instance alias 자동 설정
+  account_id=$(aws sts get-caller-identity --query "Account" --output text)
+  case "$account_id" in
+    "590183945142") instance_alias="kal-servicecenter" && region="ap-northeast-2" && env=prd;;
+    "637423289860") instance_alias="kal-servicecenter-dev" && region="ap-northeast-2" && env=dev;;
+    "637423576272") instance_alias="kal-servicecenter-stg" && region="ap-northeast-2" && env=stg;;
+    # "009160043124") instance_alias="hist-aicc-test-1" && region="us-east-1";;
+    *) echo "❌ 지원되지 않는 AWS 계정 ID: $account_id" && exit 1 ;;
+  esac
+else
+  # AWS 계정 ID 확인 및 instance alias 자동 설정
+  account_id=$(aws sts get-caller-identity --query "Account" --output text)
+  case "$account_id" in
+    "590183945142") instance_alias="kal-servicecenter-an1" && region="ap-northeast-1" && env=prd;;
+    "637423289860") instance_alias="kal-servicecenter-an1-dev" && region="ap-northeast-1" && env=dev;;
+    "637423576272") instance_alias="kal-servicecenter-an1-stg" && region="ap-northeast-1" && env=stg;;
+    # "009160043124") instance_alias="hist-aicc-test-1" && region="us-east-1";;
+    *) echo "❌ 지원되지 않는 AWS 계정 ID: $account_id" && exit 1 ;;
+  esac
+fi
 
 get_instance_id_from_alias() {
   local instance_alias="$1"
