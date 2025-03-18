@@ -13,15 +13,14 @@ from datetime import datetime, timedelta
 
 log_pattern = re.compile(r"\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}")
 
-region="ap-northeast-2"
+
 
 output_dir = './s3/'  # 로컬에 저장할 출력 디렉토리
 
 contact_ids = set()
 file_names = set()
 
-# S3 클라이언트 생성
-s3_client = boto3.client('s3', region_name="ap-northeast-2")
+
 
 def get_contact_timestamp(contact_id,region,instance_id):
     """AWS Connect Contact Flow 정보를 가져와 JSON 파일로 저장"""
@@ -41,8 +40,10 @@ def get_contact_timestamp(contact_id,region,instance_id):
 
 
 # S3에서 Gzip 파일을 다운로드하고 압축을 푼 후 처리하는 함수
-def decompress_gzip_from_s3(bucket_name, s3_key):
+def decompress_gzip_from_s3(bucket_name, s3_key, region):
     
+    # S3 클라이언트 생성
+    s3_client = boto3.client('s3', region_name=region)
     # S3 객체 다운로드
     response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
     gzip_data = response['Body'].read()  # 파일에서 Gzip 바이너리 데이터를 읽어옵니다.
@@ -56,7 +57,7 @@ def decompress_gzip_from_s3(bucket_name, s3_key):
     return decompressed_data
 
 # S3 경로에서 모든 파일을 다운로드하여 처리하는 함수
-def decompress_datadog_logs(env, contact_id, instance_id):
+def decompress_datadog_logs(env, contact_id, instance_id,region):
     # print(contact_id)
     bucket_name = f"aicc-{env}-an2-s3-adf-datadog-backup"
 
@@ -94,7 +95,7 @@ def decompress_datadog_logs(env, contact_id, instance_id):
 
     for key in s3_keys:
     # Gzip 파일을 복원하여 처리
-        decompressed_text = decompress_gzip_from_s3(bucket_name, key)
+        decompressed_text = decompress_gzip_from_s3(bucket_name, key, region)
 
         decompressed_text = decompressed_text.replace("}{","}\n{")
 

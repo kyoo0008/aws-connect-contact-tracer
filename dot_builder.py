@@ -378,7 +378,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
             if target_logs: # x-ray 추적 처리 
                 xray_trace_id = xid
 
-                xray_trace = get_xray_trace(xray_trace_id)
+                xray_trace = get_xray_trace(xray_trace_id, connect_region)
                 xray_text = ""
                 if len(xray_trace) > 0:
                     # print(f"xray_trace : {xray_trace}")
@@ -968,6 +968,8 @@ def build_main_flow(logs, lambda_logs, contact_id):
 
 # main 화면 생성 
 def build_main_contacts(selected_contact_id,associated_contacts,initiation_timestamp,region,log_group,env,instance_id):
+    global connect_region
+    connect_region = region
 
     dot = Digraph("Amazon Connect Contact Flow", filename="contact_flow.gv")
 
