@@ -336,6 +336,29 @@ def wrap_text(text, is_just_cut=False, max_length=72, wrap_at=25):
             wrapped_text = text
     return wrapped_text
 
+def wrap_transcript(text):
+    # 띄어쓰기를 기준으로 단어 단위로 split
+    words = text.split()
+
+    # 결과 저장할 배열
+    text_arr = []
+    current_text = ""
+
+    for word in words:
+        # 현재 문자열에 추가했을 때 20자를 넘는지 확인
+        if len(current_text) + len(word) + (1 if current_text else 0) > 20:
+            text_arr.append(current_text)  # 현재 문자열을 배열에 추가
+            current_text = word  # 새 문자열 시작
+        else:
+            current_text += (" " if current_text else "") + word  # 단어 추가
+
+    # 마지막 남은 문자열 추가
+    if current_text:
+        text_arr.append(current_text)
+
+    return "\n".join(text_arr)
+
+
 def check_kor(text):
     p = re.compile('[ㄱ-힣]')
     r = p.search(text)

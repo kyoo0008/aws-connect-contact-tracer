@@ -20,7 +20,8 @@ from utils import generate_node_ids, \
                     calculate_timestamp_gap, \
                     get_xray_trace, \
                     check_json_file_exists, \
-                    filter_lambda_logs
+                    filter_lambda_logs, \
+                    wrap_transcript
 from describe_flow import get_comparison_value
 from decompress_datadog_gzip import get_analysis_object
 import traceback
@@ -945,14 +946,18 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
             transcript_dot = Digraph(comment = "Transcript")
             transcript_dot.attr(rankdir="LR")
             transcript_nodes=[]
-            for script in contact_transcript:
+            temp_nodes=[]
+            for index,script in enumerate(contact_transcript):
+                # if index>1 and contact_transcript[index-1].get("ParticipantId") == contact_transcript[index].get("ParticipantId"):
+                    
                 transcript_nodes.append(script.get("Id"))
 
                 transcript_dot.node(
                     script.get("Id"),
                     label=get_node_label(
                         script.get("ParticipantId").lower(), 
-                        script.get("ParticipantId").lower(), script.get("Content").replace(".",".\n"), None, None),
+                        script.get("ParticipantId").lower(), 
+                        wrap_transcript(script.get("Content")), None, None),
                     shape='box', 
                     style='rounded,filled',
                     color='lightgray',

@@ -51,11 +51,14 @@ def get_analysis_object(env,contact_id,region,instance_id):
     # S3 클라이언트 생성
     s3_client = boto3.client('s3', region_name=region)
 
-    response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=prefix)
+    response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=prefix+"/"+contact_id)
+    
     for obj in response.get('Contents', []):
+
         s3_key = obj['Key']
 
-        if s3_key.replace(prefix+"/","").startswith(contact_id):
+        if contact_id in s3_key:
+            print("Transcript Found")
             
             data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
             conversation_data = data['Body'].read().decode('utf-8')
