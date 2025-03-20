@@ -44,7 +44,7 @@ OMIT_CONTACT_FLOW_MODULE_TYPE = [
     'InvokeFlowModule'
 ]
 
-
+ASSOCIATED_CONTACTS_FLAG=False
 
 
 def load_flow_translation(json_path):
@@ -906,6 +906,13 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
     global connect_region
     connect_region = region
 
+    search_contacts = associated_contacts["ContactSummaryList"] if ASSOCIATED_CONTACTS_FLAG else [l for l in associated_contacts["ContactSummaryList"] if l.get("ContactId") == selected_contact_id]
+
+    # if ASSOCIATED_CONTACTS_FLAG:
+    #     search_contacts = json.loads(search_contacts)
+    # print(associated_contacts)
+    # print(search_contacts)
+
     dot = Digraph("Amazon Connect Contact Flow", engine="neato", filename="contact_flow.gv")
 
     dot.attr(rankdir="LR")
@@ -917,7 +924,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
 
 
     root_contact_ids = {}
-    for contact in associated_contacts["ContactSummaryList"]:
+    for contact in search_contacts:
 
         contact_id = contact.get("ContactId")
         channel = contact.get("Channel")
@@ -928,7 +935,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         subgraphs[contact_id] = Digraph(f"cluster_{contact_id}")
         subgraphs[contact_id].attr(label=label)
 
-    for contact in associated_contacts["ContactSummaryList"]:
+    for contact in search_contacts:
         contact_id = contact.get("ContactId")
         if not contact_id:
             continue
@@ -948,7 +955,32 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
             transcript_nodes=[]
             temp_nodes=[]
             for index,script in enumerate(contact_transcript):
-                # if index>1 and contact_transcript[index-1].get("ParticipantId") == contact_transcript[index].get("ParticipantId"):
+                # 이전 노드와 동일한 Participant일 경우 
+                
+                if index>0 and contact_transcript[index-1].get("ParticipantId") == contact_transcript[index].get("ParticipantId"):
+                    print(f"1:{contact_transcript[index-1]} / 2:{contact_transcript[index]}")
+                    temp_nodes.append(script)
+                    continue
+                else:
+                    if len(temp_nodes) > 0:
+                        temp_nodes_content = []
+                        for node in temp_nodes:
+                            temp_nodes_content.append(node.get("Content"))
+                        transcript_dot.node(
+                            temp_nodes[0].get("Id"),
+                            label=get_node_label(
+                                temp_nodes[0].get("ParticipantId").lower(), 
+                                temp_nodes[0].get("ParticipantId").lower(), 
+                                wrap_transcript("/".join(temp_nodes_content)), None, None),
+                            shape='box', 
+                            style='rounded,filled',
+                            color='lightgray',
+                            URL=str(json.dumps(temp_nodes, indent=4, ensure_ascii=False))
+                        )
+                        transcript_nodes.append(temp_nodes[0].get("Id"))
+                        temp_nodes = []
+                    
+
                     
                 transcript_nodes.append(script.get("Id"))
 
@@ -983,7 +1015,8 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         
 
     # edge 추가
-    for contact in associated_contacts["ContactSummaryList"]:
+
+    for contact in search_contacts :
         contact_id = contact.get("ContactId")
         prev_id = contact.get("PreviousContactId") 
         related_id = contact.get("RelatedContactId")
@@ -1007,7 +1040,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
                 dot.edge(subgraph_nodes[prev_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
         except Exception:
             print(traceback.format_exc())
-        
+            
     for key, value in root_contact_ids.items():
         if len(subgraph_nodes[key]) > 0:
             dot.edge("start", subgraph_nodes[key][0], label=value) 
