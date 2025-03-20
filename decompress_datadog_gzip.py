@@ -38,6 +38,31 @@ def get_contact_timestamp(contact_id,region,instance_id):
 
     return initiation_time.replace(tzinfo=None),disconnect_time.replace(tzinfo=None)
 
+def get_analysis_object(env,contact_id,region,instance_id):
+    
+    """대화 내용을 가져와서 파일로 저장"""
+
+    bucket_name = f"aicc-{env}-an2-s3-acn-storage"
+
+    initiation_time,disconnect_time = get_contact_timestamp(contact_id,region,instance_id)
+
+    prefix = "Analysis/Voice/"+"/".join(str(disconnect_time).split(" ")[0].split("-"))
+    
+    # S3 클라이언트 생성
+    s3_client = boto3.client('s3', region_name=region)
+
+    response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=prefix)
+    for obj in response.get('Contents', []):
+        s3_key = obj['Key']
+
+        if s3_key.replace(prefix+"/","").startswith(contact_id):
+            
+            data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+            conversation_data = data['Body'].read().decode('utf-8')
+            
+            return json.loads(conversation_data).get('Transcript',[])
+
+    return []
 
 # S3에서 Gzip 파일을 다운로드하고 압축을 푼 후 처리하는 함수
 def decompress_gzip_from_s3(bucket_name, s3_key, region):

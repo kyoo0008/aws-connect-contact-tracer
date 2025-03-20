@@ -65,6 +65,9 @@ class SubDotWindow(DotWindowBase):
             elif json_text.startswith('./virtual_env/xray'):
                 print(f"서브 플로우 열기: {json_data}")
                 SubDotXrayWindow(json_data)
+            elif json_text.startswith('./virtual_env/transcript'):
+                print(f"서브 플로우 열기: {json_data}")
+                SubDotTranscriptWindow(json_data)
             else:
                 print(f"노드 클릭됨: \n{json_text}")
                 TextViewDialog("노드 정보", json_text)
@@ -90,6 +93,18 @@ class SubDotModuleWindow(DotWindowBase):
 
 class SubDotXrayWindow(DotWindowBase):
     """X-Ray 서브 Contact Flow 그래프를 표시하는 창"""
+
+    def on_node_clicked(self, widget, json_data, event):
+        try:
+            json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
+            print(f"노드 클릭됨: \n{json_text}")    
+            TextViewDialog("노드 정보", json_text)
+        except Exception as e:
+            print(f"SubDotXrayWindow 표시 오류: {e}")
+
+
+class SubDotTranscriptWindow(DotWindowBase):
+    """Contact Transcript를 표시하는 창"""
 
     def on_node_clicked(self, widget, json_data, event):
         try:

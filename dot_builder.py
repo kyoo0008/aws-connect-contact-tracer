@@ -22,6 +22,7 @@ from utils import generate_node_ids, \
                     check_json_file_exists, \
                     filter_lambda_logs
 from describe_flow import get_comparison_value
+from decompress_datadog_gzip import get_analysis_object
 import traceback
 
 # Error 로 인식하는 Results Keyword
@@ -897,73 +898,6 @@ def build_main_flow(logs, lambda_logs, contact_id):
 
     apply_rank(main_flow_dot, nodes)
 
-
-    # # if error
-    # if_error_xray_path=f"./virtual_env/{contact_id}/if-error-xray-trace"
-
-    # if check_json_file_exists(if_error_xray_path):
-    #     for filename in os.listdir(if_error_xray_path):
-    #         xray_trace_id = filename.replace(".json","")
-    #         associated_lambda_logs ={}
-    #         with open(if_error_xray_path+"/"+filename, 'r', encoding='utf-8') as file:
-    #             associated_lambda_logs = filter_lambda_logs(json.loads(file.read()))
-
-    #         xray_trace = get_xray_trace(xray_trace_id)
-    #         xray_text = ""
-    #         if len(xray_trace) > 0:
-    #             # print(f"xray_trace : {xray_trace}")
-    #             last_op = None
-    #             index = 1
-    #             for t in xray_trace:
-    #                 try:
-    #                     op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
-    #                 except KeyError:
-    #                     op = t["aws"]["operation"] + '\n'
-    #                 except Exception as e:
-    #                     print(e,xray_trace)
-
-    #                 if op != last_op:
-    #                     xray_text += f"Operation {index} : \n" + op
-    #                     last_op = op
-    #                     index += 1
-
-    #         xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs)
-
-    #         # level 값 가져오기
-    #         levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
-    #         l_warn_count = 0
-    #         l_error_count = 0
-    #         for l in levels:
-    #             if l == "ERROR":
-    #                 l_error_count += 1
-    #             elif l == "WARN":
-    #                 l_warn_count += 1
-                    
-    #         color = 'tomato' if l_error_count > 0 or l_warn_count > 0 else 'lightgray'
-    #         lambda_node_footer = ((f"Warn : {l_warn_count}\n" if l_warn_count > 0 else "") + (f"Error : {l_error_count}" if l_error_count > 0 else "")) if l_error_count > 0 or l_warn_count > 0 else None
-    #         node_id = f"{log.get("Timestamp").replace(":","").replace(".","")}_{xray_trace_id}"
-
-    #         # 노드 추가
-    #         main_flow_dot.node(
-    #             node_id,
-    #             label=get_node_label(
-    #                 "xray",
-    #                 "(Interface) " + get_module_name_ko("xray", log) + "  ➡️",
-    #                 xray_text,
-    #                 lambda_node_footer,
-    #                 xray_trace_id
-    #             ),
-    #             shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
-    #             style='rounded,filled',
-    #             color=color,
-    #             URL=f"{xray_trace_file}.dot"
-    #         )
-
-    #         nodes.append(node_id)
-
-    #         if l_error_count > 0 or l_warn_count > 0:
-    #             error_count += (l_error_count+l_warn_count)
-
     return main_flow_dot, nodes
 
 # main 화면 생성 
@@ -971,7 +905,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
     global connect_region
     connect_region = region
 
-    dot = Digraph("Amazon Connect Contact Flow", filename="contact_flow.gv")
+    dot = Digraph("Amazon Connect Contact Flow", engine="neato", filename="contact_flow.gv")
 
     dot.attr(rankdir="LR")
 
@@ -1003,9 +937,47 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         # Graph 생성 시작
         contact_graph, nodes = build_main_flow(logs, lambda_logs, contact_id)
 
+        # Transcript 생성
+        contact_transcript = get_analysis_object(env,contact_id,region,instance_id)
+        if len(contact_transcript) > 0:
+
+
+            transcript_dot = Digraph(comment = "Transcript")
+            transcript_dot.attr(rankdir="LR")
+            transcript_nodes=[]
+            for script in contact_transcript:
+                transcript_nodes.append(script.get("Id"))
+
+                transcript_dot.node(
+                    script.get("Id"),
+                    label=get_node_label(
+                        script.get("ParticipantId").lower(), 
+                        script.get("ParticipantId").lower(), script.get("Content").replace(".",".\n"), None, None),
+                    shape='box', 
+                    style='rounded,filled',
+                    color='lightgray',
+                    URL=str(json.dumps(script, indent=4, ensure_ascii=False))
+                )
+
+            transcript_dot = add_edges(transcript_dot, transcript_nodes)
+            apply_rank(transcript_dot, transcript_nodes)
+
+            transcript_dot.render(f"./virtual_env/transcript_{contact_id}", format="dot", cleanup=True)
+
+            contact_graph.node(
+                contact_id+"_transcript",
+                label="Transcript",
+                image=f"{os.getcwd()}/mnt/img/transcript.png",
+                URL=f"./virtual_env/transcript_{contact_id}.dot"
+                )
+        
+
         subgraphs[contact_id].subgraph(contact_graph)
         subgraph_nodes[contact_id] = nodes
 
+        
+
+    # edge 추가
     for contact in associated_contacts["ContactSummaryList"]:
         contact_id = contact.get("ContactId")
         prev_id = contact.get("PreviousContactId") 
@@ -1036,3 +1008,4 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
             dot.edge("start", subgraph_nodes[key][0], label=value) 
 
     return dot
+
