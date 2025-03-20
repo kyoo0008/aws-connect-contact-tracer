@@ -62,8 +62,10 @@ def get_analysis_object(env,contact_id,region,instance_id):
             
             data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
             conversation_data = data['Body'].read().decode('utf-8')
+
+            transcript = json.loads(conversation_data).get('Transcript',[])
             
-            return json.loads(conversation_data).get('Transcript',[])
+            return transcript
 
     return []
 

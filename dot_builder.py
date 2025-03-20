@@ -908,11 +908,6 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
 
     search_contacts = associated_contacts["ContactSummaryList"] if ASSOCIATED_CONTACTS_FLAG else [l for l in associated_contacts["ContactSummaryList"] if l.get("ContactId") == selected_contact_id]
 
-    # if ASSOCIATED_CONTACTS_FLAG:
-    #     search_contacts = json.loads(search_contacts)
-    # print(associated_contacts)
-    # print(search_contacts)
-
     dot = Digraph("Amazon Connect Contact Flow", engine="neato", filename="contact_flow.gv")
 
     dot.attr(rankdir="LR")
@@ -953,48 +948,61 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
             transcript_dot = Digraph(comment = "Transcript")
             transcript_dot.attr(rankdir="LR")
             transcript_nodes=[]
-            temp_nodes=[]
+            temp_dup_set = set()
             for index,script in enumerate(contact_transcript):
-                # 이전 노드와 동일한 Participant일 경우 
                 
-                if index>0 and contact_transcript[index-1].get("ParticipantId") == contact_transcript[index].get("ParticipantId"):
-                    print(f"1:{contact_transcript[index-1]} / 2:{contact_transcript[index]}")
-                    temp_nodes.append(script)
-                    continue
+                if index+1 != len(contact_transcript) and script.get("ParticipantId") == contact_transcript[index+1].get("ParticipantId"):
+                    temp_dup_set.add(script.get("Id"))
+                    temp_dup_set.add(contact_transcript[index+1].get("Id"))
+
                 else:
-                    if len(temp_nodes) > 0:
-                        temp_nodes_content = []
-                        for node in temp_nodes:
-                            temp_nodes_content.append(node.get("Content"))
-                        transcript_dot.node(
-                            temp_nodes[0].get("Id"),
-                            label=get_node_label(
-                                temp_nodes[0].get("ParticipantId").lower(), 
-                                temp_nodes[0].get("ParticipantId").lower(), 
-                                wrap_transcript("/".join(temp_nodes_content)), None, None),
-                            shape='box', 
-                            style='rounded,filled',
-                            color='lightgray',
-                            URL=str(json.dumps(temp_nodes, indent=4, ensure_ascii=False))
-                        )
-                        transcript_nodes.append(temp_nodes[0].get("Id"))
+                    
+                    if len(temp_dup_set) > 0:
                         temp_nodes = []
-                    
+                        temp_script_content_arr = []
+                        
+                        for tid in temp_dup_set:
+                            content = [l for l in contact_transcript if l.get("Id") == tid][0]
+                            temp_nodes.append(content)
+                            
+                        temp_nodes = sorted(temp_nodes, key=lambda x:x['BeginOffsetMillis'])
+                        for node in temp_nodes:
+                            temp_script_content_arr.append(node.get("Content"))
+                        
+                        script_contents = "/".join(temp_script_content_arr)
+                        
+                        temp_dup_set=set()
+
+                        node_id = temp_nodes[0].get("Id")
+                        label=get_node_label(
+                            temp_nodes[0].get("ParticipantId").lower(), 
+                            temp_nodes[0].get("ParticipantId").lower(), 
+                            wrap_transcript(script_contents), None, None)
+                        detail=str(json.dumps(temp_nodes, indent=4, ensure_ascii=False))
+
+                    else:
+                        node_id = script.get("Id")
+                        label=get_node_label(
+                            script.get("ParticipantId").lower(), 
+                            script.get("ParticipantId").lower(), 
+                            wrap_transcript(script.get("Content")), None, None)
+                        script_contents = script
+                        detail=str(json.dumps(script_contents, indent=4, ensure_ascii=False))
+
+
+                    transcript_nodes.append(node_id)
+
+                    transcript_dot.node(
+                        node_id,
+                        label=label,
+                        shape='box', 
+                        style='rounded,filled',
+                        color='lightgray',
+                        URL=detail
+                    )
 
                     
-                transcript_nodes.append(script.get("Id"))
-
-                transcript_dot.node(
-                    script.get("Id"),
-                    label=get_node_label(
-                        script.get("ParticipantId").lower(), 
-                        script.get("ParticipantId").lower(), 
-                        wrap_transcript(script.get("Content")), None, None),
-                    shape='box', 
-                    style='rounded,filled',
-                    color='lightgray',
-                    URL=str(json.dumps(script, indent=4, ensure_ascii=False))
-                )
+                
 
             transcript_dot = add_edges(transcript_dot, transcript_nodes)
             apply_rank(transcript_dot, transcript_nodes)
