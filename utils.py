@@ -204,7 +204,7 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
     except Exception as e:
         print('')
 
-    return logs, lambda_logs
+    return logs, lambda_logs, contact_flow_ids
 
 # flow-internal-handler
 def get_func_name(arn):

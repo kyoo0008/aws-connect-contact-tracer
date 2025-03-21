@@ -49,8 +49,15 @@ class MainDotWindow(DotWindowBase):
     """메인 Contact Flow 그래프를 표시하는 창"""
 
     def on_node_clicked(self, widget, sub_file, event):
-        print(f"서브 플로우 열기: {sub_file}")
-        SubDotWindow(sub_file)
+        
+        if "flow" in sub_file or "transcript" in sub_file:
+            print(f"서브 플로우 열기: {sub_file}")
+            SubDotWindow(sub_file)
+        else:
+            json_text = json.dumps(sub_file, indent=4, ensure_ascii=False) if isinstance(sub_file, dict) else sub_file
+            print(f"노드 클릭됨: \n{json_text}")
+            TextViewDialog("노드 정보", json_text)
+
 
 
 class SubDotWindow(DotWindowBase):

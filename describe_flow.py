@@ -1,6 +1,7 @@
 import boto3
 import json
 import re
+import os
 
 def extract_ids_from_arn(arn):
     """ARN에서 instance_id 및 flow_id 또는 flow_module_id 추출"""
@@ -55,6 +56,48 @@ def get_contact_flow_module(flow_module_arn,region):
 
     content = json.loads(response["ContactFlowModule"]["Content"])
     save_json(content, jsonfile_name)
+
+def get_contact_attributes(contact_id,region,file_name,instance_id):
+    """AWS Connect Contact Attributes 정보 가져오기"""
+    # client = boto3.client("connect", region_name=region)
+
+    # response = client.get_contact_attributes(
+    #     InstanceId=instance_id,
+    #     InitialContactId=contact_id
+    # )
+    # attributes = json.loads(response["Attributes"])
+    # for key in attributes.keys():
+        
+    # content = json.loads(file_name)
+    file_path = f"./virtual_env/{file_name}"
+    if os.path.isfile(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            flow_json = json.loads(f.read())
+            comparison_values = {}
+            for action in flow_json["Actions"]:
+                if action.get("Type")  == 'UpdateContactData':
+                    result_data = {key: value for key, value in action.get("Parameters").items() if "$." in value}
+                    comparison_values = {**comparison_values,**result_data} 
+                elif action.get("Type") == 'UpdateContactAttributes':
+                    result_data = {key: value for key, value in action.get("Parameters")["Attributes"].items() if "$." in value}
+                    comparison_values = {**comparison_values,**result_data} 
+                elif action.get("Type") == 'UpdateFlowAttributes':
+                    dict_obj = json.loads(json.dumps(action.get("Parameters")["FlowAttributes"]))
+                    output_dict = {}
+
+                    for key, value in dict_obj.items():
+                        if "$." in value["Value"]:
+                            output_dict[key] = value["Value"]
+
+                    comparison_values = {**comparison_values,**output_dict} 
+            return comparison_values
+    else:
+        return None
+
+
+
+    
+
 
 def get_comparison_value(flow_module_arn,block_id,is_second_value):
     instance_id, entity_type, flow_id = extract_ids_from_arn(flow_module_arn)

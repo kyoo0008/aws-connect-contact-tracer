@@ -22,7 +22,8 @@ from utils import generate_node_ids, \
                     check_json_file_exists, \
                     filter_lambda_logs, \
                     wrap_transcript
-from describe_flow import get_comparison_value
+from describe_flow import get_comparison_value, \
+                    get_contact_attributes
 from decompress_datadog_gzip import get_analysis_object
 import traceback
 
@@ -44,7 +45,7 @@ OMIT_CONTACT_FLOW_MODULE_TYPE = [
     'InvokeFlowModule'
 ]
 
-ASSOCIATED_CONTACTS_FLAG=False
+ASSOCIATED_CONTACTS_FLAG=True
 
 
 def load_flow_translation(json_path):
@@ -220,6 +221,19 @@ def get_node_text_by_module_type(module_type,log,block_id):
     node_text = wrap_text(node_text,is_just_cut=True,max_length=100)
 
     return node_text, node_footer
+
+# image label 가져오기
+def get_image_label(icon_path,text,size):
+
+    label = f"""<<table border="0" cellborder="0" cellspacing="0">
+        <tr>
+            <td bgcolor="white" width="{size}" height="{size}" fixedsize="true"><img scale="true" src="{icon_path}"/></td>
+        </tr>
+        <tr>
+            <td bgcolor="white" width="100">{text}</td>
+        </tr></table>>"""
+
+    return label
 
 # node label 가져오기
 def get_node_label(module_type, node_title, node_text, node_footer, block_id):
@@ -457,9 +471,19 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 def get_segment_node(xray_dot,subdata,parent_id):
     icon_path = f"{os.getcwd()}/mnt/aws/{subdata.get("name")}.png"
     if os.path.isfile(icon_path):
-        xray_dot.node(subdata.get("id"), label=subdata.get("name",""), image=icon_path, URL=json.dumps(subdata, indent=2, ensure_ascii=False))
+        xray_dot.node(
+            subdata.get("id"), 
+            label=get_image_label(icon_path,subdata.get("name",""),50), 
+            shape="plaintext",
+            URL=json.dumps(subdata, indent=2, ensure_ascii=False)
+        )
     else:
-        xray_dot.node(subdata.get("id"), label=subdata.get("name",""), image=f"{os.getcwd()}/mnt/aws/settings.png", URL=json.dumps(subdata, indent=2, ensure_ascii=False))
+        xray_dot.node(
+            subdata.get("id"), 
+            label=get_image_label(f"{os.getcwd()}/mnt/aws/settings.png",subdata.get("name",""),50), 
+            shape="plaintext",
+            URL=json.dumps(subdata, indent=2, ensure_ascii=False)
+        )
         
     label, xlabel = get_xray_edge_label(subdata)
     if label != "":
@@ -562,12 +586,14 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
                         if os.path.isfile(icon_path):
                             
                             xray_dot.node(xray_batch_json_data.get("id"),
-                                            label=xray_batch_json_data.get("name"),
-                                            image=icon_path, URL=json.dumps(xray_batch_json_data,indent=2,ensure_ascii=False))
+                                            label=get_image_label(icon_path,xray_batch_json_data.get("name"),50),
+                                            shape="plaintext",
+                                            URL=json.dumps(xray_batch_json_data,indent=2,ensure_ascii=False))
                         else:
                             xray_dot.node(xray_batch_json_data.get("id"),
-                                            label=xray_batch_json_data.get("name"),
-                                            image=f"{os.getcwd()}/mnt/aws/settings.png", URL=json.dumps(xray_batch_json_data,indent=2,ensure_ascii=False))
+                                            label=get_image_label(f"{os.getcwd()}/mnt/aws/settings.png",xray_batch_json_data.get("name"),50),
+                                            shape="plaintext",
+                                            URL=json.dumps(xray_batch_json_data,indent=2,ensure_ascii=False))
                 parent_id = get_xray_parent_id(xray_batch_json_data.get("parent_id"),xray_batch_json_data_list)
 
                 if parent_id:
@@ -801,6 +827,78 @@ def build_module_detail(logs, module_name,lambda_logs,module_error_count):
 
     return m_dot, nodes, module_error_count
 
+def build_transcript_dot(env,contact_id,region,instance_id):
+    transcript_nodes=[]
+    # Transcript 생성
+    contact_transcript = get_analysis_object(env,contact_id,region,instance_id)
+    if len(contact_transcript) > 0:
+
+
+        transcript_dot = Digraph(comment = "Transcript")
+        transcript_dot.attr(rankdir="LR")
+        
+        temp_dup_set = set()
+        for index,script in enumerate(contact_transcript):
+            
+            if index+1 != len(contact_transcript) and script.get("ParticipantId") == contact_transcript[index+1].get("ParticipantId"):
+                temp_dup_set.add(script.get("Id"))
+                temp_dup_set.add(contact_transcript[index+1].get("Id"))
+
+            else:
+                
+                if len(temp_dup_set) > 0:
+                    temp_nodes = []
+                    temp_script_content_arr = []
+                    
+                    for tid in temp_dup_set:
+                        content = [l for l in contact_transcript if l.get("Id") == tid][0]
+                        temp_nodes.append(content)
+                        
+                    temp_nodes = sorted(temp_nodes, key=lambda x:x['BeginOffsetMillis'])
+                    for node in temp_nodes:
+                        temp_script_content_arr.append(node.get("Content"))
+                    
+                    script_contents = "/".join(temp_script_content_arr)
+                    
+                    temp_dup_set=set()
+
+                    node_id = temp_nodes[0].get("Id")
+                    label=get_node_label(
+                        temp_nodes[0].get("ParticipantId").lower(), 
+                        temp_nodes[0].get("ParticipantId").lower(), 
+                        wrap_transcript(script_contents), None, None)
+                    detail=str(json.dumps(temp_nodes, indent=4, ensure_ascii=False))
+
+                else:
+                    node_id = script.get("Id")
+                    label=get_node_label(
+                        script.get("ParticipantId").lower(), 
+                        script.get("ParticipantId").lower(), 
+                        wrap_transcript(script.get("Content")), None, None)
+                    script_contents = script
+                    detail=str(json.dumps(script_contents, indent=4, ensure_ascii=False))
+
+
+                transcript_nodes.append(node_id)
+
+                transcript_dot.node(
+                    node_id,
+                    label=label,
+                    shape='box', 
+                    style='rounded,filled',
+                    color='lightgray',
+                    URL=detail
+                )
+
+                
+            
+
+        transcript_dot = add_edges(transcript_dot, transcript_nodes)
+        apply_rank(transcript_dot, transcript_nodes)
+
+        transcript_dot.render(f"./virtual_env/transcript_{contact_id}", format="dot", cleanup=True)
+    return transcript_nodes
+
 def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_count):
     """
     Graphviz를 사용해 Contact Detail 흐름을 시각화하고,
@@ -901,6 +999,8 @@ def build_main_flow(logs, lambda_logs, contact_id):
 
     return main_flow_dot, nodes
 
+
+
 # main 화면 생성 
 def build_main_contacts(selected_contact_id,associated_contacts,initiation_timestamp,region,log_group,env,instance_id):
     global connect_region
@@ -935,87 +1035,47 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         if not contact_id:
             continue
 
-        logs, lambda_logs = fetch_logs(contact_id,initiation_timestamp,region,log_group,env,instance_id)
+        logs, lambda_logs, contact_flow_ids = fetch_logs(contact_id,initiation_timestamp,region,log_group,env,instance_id)
 
         # Graph 생성 시작
         contact_graph, nodes = build_main_flow(logs, lambda_logs, contact_id)
 
-        # Transcript 생성
-        contact_transcript = get_analysis_object(env,contact_id,region,instance_id)
-        if len(contact_transcript) > 0:
+        # Transcript Node 생성 
+        transcript_nodes = build_transcript_dot(env,contact_id,region,instance_id)
 
-
-            transcript_dot = Digraph(comment = "Transcript")
-            transcript_dot.attr(rankdir="LR")
-            transcript_nodes=[]
-            temp_dup_set = set()
-            for index,script in enumerate(contact_transcript):
-                
-                if index+1 != len(contact_transcript) and script.get("ParticipantId") == contact_transcript[index+1].get("ParticipantId"):
-                    temp_dup_set.add(script.get("Id"))
-                    temp_dup_set.add(contact_transcript[index+1].get("Id"))
-
-                else:
-                    
-                    if len(temp_dup_set) > 0:
-                        temp_nodes = []
-                        temp_script_content_arr = []
-                        
-                        for tid in temp_dup_set:
-                            content = [l for l in contact_transcript if l.get("Id") == tid][0]
-                            temp_nodes.append(content)
-                            
-                        temp_nodes = sorted(temp_nodes, key=lambda x:x['BeginOffsetMillis'])
-                        for node in temp_nodes:
-                            temp_script_content_arr.append(node.get("Content"))
-                        
-                        script_contents = "/".join(temp_script_content_arr)
-                        
-                        temp_dup_set=set()
-
-                        node_id = temp_nodes[0].get("Id")
-                        label=get_node_label(
-                            temp_nodes[0].get("ParticipantId").lower(), 
-                            temp_nodes[0].get("ParticipantId").lower(), 
-                            wrap_transcript(script_contents), None, None)
-                        detail=str(json.dumps(temp_nodes, indent=4, ensure_ascii=False))
-
-                    else:
-                        node_id = script.get("Id")
-                        label=get_node_label(
-                            script.get("ParticipantId").lower(), 
-                            script.get("ParticipantId").lower(), 
-                            wrap_transcript(script.get("Content")), None, None)
-                        script_contents = script
-                        detail=str(json.dumps(script_contents, indent=4, ensure_ascii=False))
-
-
-                    transcript_nodes.append(node_id)
-
-                    transcript_dot.node(
-                        node_id,
-                        label=label,
-                        shape='box', 
-                        style='rounded,filled',
-                        color='lightgray',
-                        URL=detail
-                    )
-
-                    
-                
-
-            transcript_dot = add_edges(transcript_dot, transcript_nodes)
-            apply_rank(transcript_dot, transcript_nodes)
-
-            transcript_dot.render(f"./virtual_env/transcript_{contact_id}", format="dot", cleanup=True)
-
+        if len(transcript_nodes) > 0:
             contact_graph.node(
                 contact_id+"_transcript",
-                label="Transcript",
-                image=f"{os.getcwd()}/mnt/img/transcript.png",
+                label=get_image_label(f"{os.getcwd()}/mnt/img/transcript.png","Transcript",30),
+                shape="plaintext",
                 URL=f"./virtual_env/transcript_{contact_id}.dot"
                 )
-        
+
+        # Attribute Node 생성
+        result_flow_ids = []
+        for fid in contact_flow_ids:
+            result_flow_ids.append(fid.split("/")[-1])
+
+
+
+        client = boto3.client("connect", region_name=region)
+
+        response = client.get_contact_attributes(
+            InstanceId=instance_id,
+            InitialContactId=contact_id
+        )
+
+        # print(f"contact_attributes : \n{response["Attributes"]}")
+        contact_graph.node(
+                contact_id+"_attributes",
+                label=get_image_label(f"{os.getcwd()}/mnt/img/SetAttributes.png","Attributes",30),
+                shape="plaintext",
+                URL=str(json.dumps(response["Attributes"], indent=2, sort_keys=True, ensure_ascii=False))
+                )
+        # for key in attributes.keys():
+            
+        # content = json.loads(file_name)
+
 
         subgraphs[contact_id].subgraph(contact_graph)
         subgraph_nodes[contact_id] = nodes
