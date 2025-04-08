@@ -13,7 +13,7 @@ from collections import defaultdict
 from describe_flow import get_contact_flow, \
                         get_contact_flow_module
 
-from decompress_datadog_gzip import decompress_datadog_logs
+from fetch_data_from_s3 import decompress_datadog_logs
 
 # 그래프에서 한 줄에 표시할 노드 수 
 COLS_NUM = 5
@@ -226,7 +226,7 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
     CloudWatch Logs에서 ContactId에 해당하는 로그를 가져옵니다.
     """
 
-    if "bot" not in log_group:
+    if "/aws/lex/" not in log_group:
         query = f"""
             fields @timestamp, @message
             | filter ContactId = \"{contact_id}\"
@@ -273,9 +273,9 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
     logs = filter_lambda_logs(response)
 
     # To-do : delete
-    if "bot" in log_group:
+    if "/aws/lex/" in log_group:
         # JSON 파일 저장    
-        output_json_path = f"./virtual_env/lmd_{contact_id + "_".join(log_group.split("/"))}.json"
+        output_json_path = f"./virtual_env/lex_{contact_id}.json"
         with open(output_json_path, "w", encoding="utf-8") as json_file:
             json.dump(logs, json_file, ensure_ascii=False, indent=4)
 

@@ -24,7 +24,7 @@ from utils import generate_node_ids, \
                     wrap_transcript
 from describe_flow import get_comparison_value, \
                     get_contact_attributes
-from decompress_datadog_gzip import get_analysis_object
+from fetch_data_from_s3 import get_analysis_object
 import traceback
 
 # Error 로 인식하는 Results Keyword
@@ -323,6 +323,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
     check_log = None
     # AWS Lambda Xray trace 추적
     if module_type == "InvokeExternalResource" and len(lambda_logs) > 0:
+        
         function_name = get_func_name(log.get("Parameters")["FunctionArn"])
         try:
 
@@ -466,7 +467,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
         except Exception:
             print(check_log)
             print(traceback.format_exc())
-
+        
     return dot, nodes, error_count
 
 def get_segment_node(xray_dot,subdata,parent_id):
@@ -830,6 +831,72 @@ def build_module_detail(logs, module_name,lambda_logs,module_error_count):
 
     return m_dot, nodes, module_error_count
 
+def build_lex_dot(contact_id):
+    lex_nodes=[]
+    file_path = f"./virtual_env/lex_{contact_id}.json"
+    lex_transcript = []
+    # Transcript 생성
+    if os.path.isfile(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            lex_transcript = json.loads(f.read())
+    else:
+        return []
+
+    if len(lex_transcript) > 0:
+
+        lex_dot = Digraph(comment = "Transcript")
+        lex_dot.attr(rankdir="LR")
+        
+
+        for index,script in enumerate(lex_transcript):
+            
+            customer_node_id = script.get("requestId")+"-customer"
+            # 고객 node
+            lex_nodes.append(customer_node_id)
+
+            lex_dot.node(
+                customer_node_id,
+                label=get_node_label(
+                    "customer", 
+                    "customer", 
+                    wrap_transcript(script.get("inputTranscript","")), None, None),
+                shape='box', 
+                style='rounded,filled',
+                color='lightgray',
+                URL=str(json.dumps(script, indent=4, ensure_ascii=False))
+            )
+
+            # AI 상담사 Node
+            agent_node_id = script.get("requestId")+"-agent"
+
+            lex_nodes.append(agent_node_id)
+            agent_transcript = ""
+            for message in script.get("messages",[]):
+                agent_transcript += message.get("content","")
+
+
+
+            lex_dot.node(
+                agent_node_id,
+                label=get_node_label(
+                    "agent", 
+                    "agent", 
+                    wrap_transcript(agent_transcript), None, None),
+                shape='box', 
+                style='rounded,filled',
+                color='lightgray',
+                URL=str(json.dumps(script, indent=4, ensure_ascii=False))
+            )
+
+                
+            
+
+        lex_dot = add_edges(lex_dot, lex_nodes)
+        apply_rank(lex_dot, lex_nodes)
+
+        lex_dot.render(f"./virtual_env/lex_{contact_id}", format="dot", cleanup=True)
+    return lex_nodes
+
 def build_transcript_dot(env,contact_id,region,instance_id):
     transcript_nodes=[]
     # Transcript 생성
@@ -1053,6 +1120,18 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
                 shape="plaintext",
                 URL=f"./virtual_env/transcript_{contact_id}.dot"
                 )
+
+        lex_nodes = build_lex_dot(contact_id)
+
+        if len(lex_nodes) > 0:
+            contact_graph.node(
+                contact_id+"_lex_script",
+                label=get_image_label(f"{os.getcwd()}/mnt/aws/Lex.png","Lex",30),
+                shape="plaintext",
+                URL=f"./virtual_env/lex_{contact_id}.dot"
+                )
+
+
 
         # Attribute Node 생성
         result_flow_ids = []

@@ -50,7 +50,7 @@ class MainDotWindow(DotWindowBase):
 
     def on_node_clicked(self, widget, sub_file, event):
         
-        if ("flow" in sub_file and ".dot" in sub_file) or "transcript" in sub_file:
+        if ("flow" in sub_file and ".dot" in sub_file) or "transcript" in sub_file or "lex" in sub_file:
             print(f"서브 플로우 열기: {sub_file}")
             SubDotWindow(sub_file)
         else:
@@ -72,7 +72,7 @@ class SubDotWindow(DotWindowBase):
             elif json_text.startswith('./virtual_env/xray'):
                 print(f"서브 플로우 열기: {json_data}")
                 SubDotXrayWindow(json_data)
-            elif json_text.startswith('./virtual_env/transcript'):
+            elif json_text.startswith('./virtual_env/transcript') or json_text.startswith('./virtual_env/lex'):
                 print(f"서브 플로우 열기: {json_data}")
                 SubDotTranscriptWindow(json_data)
             else:

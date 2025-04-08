@@ -59,16 +59,7 @@ def get_contact_flow_module(flow_module_arn,region):
 
 def get_contact_attributes(contact_id,region,file_name,instance_id):
     """AWS Connect Contact Attributes 정보 가져오기"""
-    # client = boto3.client("connect", region_name=region)
 
-    # response = client.get_contact_attributes(
-    #     InstanceId=instance_id,
-    #     InitialContactId=contact_id
-    # )
-    # attributes = json.loads(response["Attributes"])
-    # for key in attributes.keys():
-        
-    # content = json.loads(file_name)
     file_path = f"./virtual_env/{file_name}"
     if os.path.isfile(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
