@@ -157,6 +157,11 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
                     logs.append(json_value)
                     contact_flow_ids.add(json_value.get("ContactFlowId"))
 
+                if "BotAliasArn" in str(json_value):
+                    
+                    lambda_log_groups.add(f"/aws/lex/aicc/{get_bot_name_from_alias_arn(json_value.get("Parameters")["BotAliasArn"])}")
+
+
                 # Lambda 함수 수집 
                 if json_value.get("ContactFlowModuleType") == "InvokeExternalResource":
                     function_arn = json_value.get("Parameters")["FunctionArn"]
@@ -220,11 +225,19 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
     """
     CloudWatch Logs에서 ContactId에 해당하는 로그를 가져옵니다.
     """
-    query = f"""
-        fields @timestamp, @message
-        | filter ContactId = \"{contact_id}\"
-        | sort @timestamp asc
-        """
+
+    if "bot" not in log_group:
+        query = f"""
+            fields @timestamp, @message
+            | filter ContactId = \"{contact_id}\"
+            | sort @timestamp asc
+            """
+    else:
+        query = f"""
+            fields @timestamp, @message
+            | filter @message like \"{contact_id}\"
+            | sort @timestamp asc
+            """
 
     initiation_time = datetime.fromisoformat(initiation_timestamp).astimezone(pytz.UTC)
 
@@ -258,6 +271,13 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
 
 
     logs = filter_lambda_logs(response)
+
+    # To-do : delete
+    if "bot" in log_group:
+        # JSON 파일 저장    
+        output_json_path = f"./virtual_env/lmd_{contact_id + "_".join(log_group.split("/"))}.json"
+        with open(output_json_path, "w", encoding="utf-8") as json_file:
+            json.dump(logs, json_file, ensure_ascii=False, indent=4)
 
     return logs
 
@@ -417,3 +437,24 @@ def calculate_timestamp_gap(t1, t2):
 
     millisecond_difference = int((dt1 - dt2).total_seconds() * 1000)
     return millisecond_difference
+
+def get_bot_name_from_alias_arn(alias_arn: str) -> str:
+    lex = boto3.client('lexv2-models')
+
+    # ARN에서 botId, aliasId 추출
+    match = re.match(r'arn:aws:lex:[\w-]+:\d+:bot-alias/([^/]+)/([^/]+)', alias_arn)
+    if not match:
+        raise ValueError("Invalid Lex Bot Alias ARN")
+
+    bot_id, alias_id = match.groups()
+
+    # Alias 정보 조회
+    alias_info = lex.describe_bot_alias(
+        botAliasId=alias_id,
+        botId=bot_id
+    )
+
+    # Bot 정보 조회
+    bot_info = lex.describe_bot(botId=bot_id)
+
+    return bot_info['botName']

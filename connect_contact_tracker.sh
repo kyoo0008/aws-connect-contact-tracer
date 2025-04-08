@@ -316,7 +316,7 @@ search_contacts(){
         | limit 10000"
       fi
 
-      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
+      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-144H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
 
       # 쿼리 실행 후 대기
       while true; do

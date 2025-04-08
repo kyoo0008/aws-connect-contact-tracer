@@ -45,6 +45,7 @@ OMIT_CONTACT_FLOW_MODULE_TYPE = [
     'InvokeFlowModule'
 ]
 
+# Associated Contact 조회 여부(True : 여러 관련된 Contact 조회, False : 입력된 하나의 Contact만 조회)
 ASSOCIATED_CONTACTS_FLAG=True
 
 
@@ -649,6 +650,8 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
     
     return xray_trace_file
     
+
+
 
 # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
 def dup_block_sanitize(node_cache, dot, nodes):

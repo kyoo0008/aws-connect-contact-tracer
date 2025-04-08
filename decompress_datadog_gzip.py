@@ -34,9 +34,13 @@ def get_contact_timestamp(contact_id,region,instance_id):
 
     # init -1분, disconnect +10분
     initiation_time = datetime.fromisoformat(str(response["Contact"]["InitiationTimestamp"])).astimezone(pytz.UTC) - timedelta(minutes=1)
-    disconnect_time = datetime.fromisoformat(str(response["Contact"]["DisconnectTimestamp"])).astimezone(pytz.UTC) + timedelta(minutes=10)
+    if response["Contact"].get("DisconnectTimestamp"):
+        disconnect_time = datetime.fromisoformat(str(response["Contact"]["DisconnectTimestamp"])).astimezone(pytz.UTC) + timedelta(minutes=10)
+        return initiation_time.replace(tzinfo=None),disconnect_time.replace(tzinfo=None)
+    else:
+        return initiation_time.replace(tzinfo=None),None
 
-    return initiation_time.replace(tzinfo=None),disconnect_time.replace(tzinfo=None)
+    
 
 def get_analysis_object(env,contact_id,region,instance_id):
     
@@ -46,7 +50,8 @@ def get_analysis_object(env,contact_id,region,instance_id):
 
     initiation_time,disconnect_time = get_contact_timestamp(contact_id,region,instance_id)
 
-    prefix = "Analysis/Voice/"+"/".join(str(disconnect_time).split(" ")[0].split("-"))+"/"+contact_id
+    prefix = "Analysis/Voice/"+"/".join(str(disconnect_time if disconnect_time else initiation_time).split(" ")[0].split("-"))+"/"+contact_id
+    
     
     # S3 클라이언트 생성
     s3_client = boto3.client('s3', region_name=region)
