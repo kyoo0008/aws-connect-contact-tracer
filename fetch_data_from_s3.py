@@ -101,6 +101,7 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
     s3_client = boto3.client('s3', region_name=region)
 
     logs = []
+    datadog_lambda_logs = []
 
     initiation_time,disconnect_time = get_contact_timestamp(contact_id,region,instance_id)
 
@@ -128,7 +129,7 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
 
             except Exception as e:
                 print(f"Skipping non-gzip file {s3_key} : {e}")
-
+    lambda_log_groups = set()
     for key in s3_keys:
     # Gzip 파일을 복원하여 처리
         decompressed_text = decompress_gzip_from_s3(bucket_name, key, region)
@@ -140,15 +141,17 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
 
         # print(f"Processing file: {key}") 
 
-        # with open(f"{output_dir}/{key.split("/")[4]}", "w", encoding="utf-8") as f:
+        # with open(f"{output_dir}{key.split("/")[4]}", "w", encoding="utf-8") as f:
         #     f.write(decompressed_text)
 
         # f.close()
         data = decompressed_text.splitlines()
+        
         for line in data:
             json_data = json.loads(line)
             try:
                 if contact_id in line and json_data.get("logGroup"):
+                    
                     if "/aws/connect/kal-servicecenter" in json_data.get("logGroup"):
                         for event in json_data['logEvents']:
 
@@ -157,6 +160,14 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
                                 logs.append(message)
                             # :
                             #     contact_ids.add(message.get("ContactId"))
+                    elif "/aws/lmd" in json_data.get("logGroup"):
+                        lambda_log_groups.add(json_data.get("logGroup"))
+                        for event in json_data['logEvents']:
+
+                            message = json.loads(event.get("message"))
+                            if message.get("ContactId") == contact_id:
+                                datadog_lambda_logs.append(message)
+
 
 
 
@@ -164,15 +175,36 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
                 print(e)
 
     logs = sorted(logs, key=lambda x : x["Timestamp"], reverse=False) # To-do : Timestamp 순이 아니라 다른 방식으로 정렬해야 할듯
-    
+    datadog_lambda_logs = sorted(datadog_lambda_logs, key=lambda x : x["timestamp"], reverse=False)
+    # print(lambda_log_groups)
+    lambda_logs = {}
+    for lambda_log_group in lambda_log_groups:
+        
+        function_name = lambda_log_group.split("/")[4]
+
+        f_logs = []
+        for datadog_lambda_log in datadog_lambda_logs:
+            print(lambda_log_group, function_name, datadog_lambda_log)
+            if function_name in datadog_lambda_log.get("service"):
+                f_logs.append(datadog_lambda_log)
+
+        lambda_logs[function_name] = f_logs
+
     # JSON 파일 저장    
-    output_json_path = f"./virtual_env/contact_flow_{contact_id}.json"        
+    output_json_path = f"./virtual_env/contact_flow_{contact_id}.json"
+    lambda_output_json_path = f"./virtual_env/lambda_logs_{contact_id}.json"
 
     if len(logs) > 0:
         with open(output_json_path, "w", encoding="utf-8") as json_file:
             json.dump(logs, json_file, ensure_ascii=False, indent=4)
             print(f"{output_json_path} saved!!!")
-    return logs, [] # To-do : Lambda Logs
+
+    if len(lambda_logs) > 0:
+        with open(lambda_output_json_path, "w", encoding="utf-8") as json_file:
+            json.dump(lambda_logs, json_file, ensure_ascii=False, indent=4)
+            print(f"{lambda_output_json_path} saved!!!")
+
+    return logs, lambda_logs # To-do : Lambda Logs
 
     
 def single_int_to_str(i):

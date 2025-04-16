@@ -107,8 +107,9 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
             print("1일 전부터 발생한 ContactId 입력 후 현재 Cloudwatch에서 조회 가능합니다. ")
             print("S3에 백업 된 데이터를 불러옵니다...S3에서 가져온 데이터는 Lambda Xray Trace기능이 없습니다.(추후 개발 예정)")
             print(f"contact id : {contact_id}")
-            datadog_logs, _ = decompress_datadog_logs(env,contact_id,instance_id,region)
+            datadog_logs, datadog_lambda_logs = decompress_datadog_logs(env,contact_id,instance_id,region)
             datadog_logs = generate_node_ids(datadog_logs, False)
+            # datadog_lambda_logs = []
             result_logs = []
             contact_flow_ids = set()
 
@@ -118,6 +119,9 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
                 if json_value.get("ContactFlowName") not in EXCEPT_CONTACT_FLOW_NAME and json_value.get("ContactId") == contact_id: 
                     result_logs.append(json_value)
                     contact_flow_ids.add(json_value.get("ContactFlowId"))
+
+                # if json_value.get("xray_trace_id") and json_value.get("ContactId") == contact_id:
+                #     datadog_lambda_logs.append(json_value)
 
             for contact_flow_id in contact_flow_ids:
                 if 'contact-flow' in contact_flow_id:
@@ -131,7 +135,10 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
                     if not os.path.isfile(jsonfile_name):
                         get_contact_flow_module(contact_flow_id, region)
 
-            return datadog_logs, []
+
+            # print(datadog_lambda_logs)
+
+            return datadog_logs, datadog_lambda_logs, contact_flow_ids
         else:
             print(f"Error : {e}")
         sys.exit(1)
