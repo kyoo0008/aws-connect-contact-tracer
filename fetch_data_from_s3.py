@@ -145,10 +145,13 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
         #     f.write(decompressed_text)
 
         # f.close()
+
         data = decompressed_text.splitlines()
         
         for line in data:
             json_data = json.loads(line)
+
+            #### filter logic start ####
             try:
                 if contact_id in line and json_data.get("logGroup"):
                     
@@ -176,7 +179,7 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
 
     logs = sorted(logs, key=lambda x : x["Timestamp"], reverse=False) # To-do : Timestamp 순이 아니라 다른 방식으로 정렬해야 할듯
     datadog_lambda_logs = sorted(datadog_lambda_logs, key=lambda x : x["timestamp"], reverse=False)
-    # print(lambda_log_groups)
+
     lambda_logs = {}
     for lambda_log_group in lambda_log_groups:
         
@@ -184,7 +187,7 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
 
         f_logs = []
         for datadog_lambda_log in datadog_lambda_logs:
-            print(lambda_log_group, function_name, datadog_lambda_log)
+
             if function_name in datadog_lambda_log.get("service"):
                 f_logs.append(datadog_lambda_log)
 
@@ -204,7 +207,8 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
             json.dump(lambda_logs, json_file, ensure_ascii=False, indent=4)
             print(f"{lambda_output_json_path} saved!!!")
 
-    return logs, lambda_logs # To-do : Lambda Logs
+    #### filter logic end ####
+    return logs, lambda_logs
 
     
 def single_int_to_str(i):
