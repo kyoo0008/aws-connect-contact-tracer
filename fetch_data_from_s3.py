@@ -64,32 +64,60 @@ def get_analysis_object(env,contact_id,region,instance_id):
 
         if contact_id in s3_key:
             print("Transcript Found")
-            
-            data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-            conversation_data = data['Body'].read().decode('utf-8')
+            try:
+                data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+                conversation_data = data['Body'].read().decode('utf-8')
 
-            transcript = json.loads(conversation_data).get('Transcript',[])
-            
-            return transcript
+                transcript = json.loads(conversation_data).get('Transcript',[])
+                
+                return transcript
+            except botocore.exceptions.ClientError as e:
+                error_code = e.response['Error']['Code']
+                print(f"❌ Failed to get transcript from S3: {error_code}")
+                if error_code == "AccessDenied":
+                    print("🔒 Access denied. Likely due to KMS Decrypt permission or cross-region resource.")
+                elif error_code == "NoSuchKey":
+                    print("📂 S3 key not found.")
+                else:
+                    print(f"⚠️ Unhandled S3 error: {e}")
+                return []
+
+            except Exception as e:
+                print(f"❗ Unexpected error while fetching transcript: {e}")
+                return []
 
     return []
 
 # S3에서 Gzip 파일을 다운로드하고 압축을 푼 후 처리하는 함수
 def decompress_gzip_from_s3(bucket_name, s3_key, region):
-    
-    # S3 클라이언트 생성
-    s3_client = boto3.client('s3', region_name=region)
-    # S3 객체 다운로드
-    response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-    gzip_data = response['Body'].read()  # 파일에서 Gzip 바이너리 데이터를 읽어옵니다.
-
-    # 메모리에서 gzip 데이터를 읽어옵니다.
     try:
-        with gzip.GzipFile(fileobj=io.BytesIO(gzip_data), mode='rb') as f:
-            decompressed_data = f.read().decode('utf-8')  # 압축을 풀고 텍스트로 복원
+        # S3 클라이언트 생성
+        s3_client = boto3.client('s3', region_name=region)
+        # S3 객체 다운로드
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+        gzip_data = response['Body'].read()  # 파일에서 Gzip 바이너리 데이터를 읽어옵니다.
+
+        # 메모리에서 gzip 데이터를 읽어옵니다.
+        try:
+            with gzip.GzipFile(fileobj=io.BytesIO(gzip_data), mode='rb') as f:
+                decompressed_data = f.read().decode('utf-8')  # 압축을 풀고 텍스트로 복원
+        except Exception as e:
+            print(f'gzip failed : {e}')
+        return decompressed_data
+    except botocore.exceptions.ClientError as e:
+        error_code = e.response['Error']['Code']
+        print(f"❌ Failed to get transcript from S3: {error_code}")
+        if error_code == "AccessDenied":
+            print("🔒 Access denied. Likely due to KMS Decrypt permission or cross-region resource.")
+        elif error_code == "NoSuchKey":
+            print("📂 S3 key not found.")
+        else:
+            print(f"⚠️ Unhandled S3 error: {e}")
+        return []
+
     except Exception as e:
-        print(f'gzip failed : {e}')
-    return decompressed_data
+        print(f"❗ Unexpected error while fetching transcript: {e}")
+        return []
 
 # S3 경로에서 모든 파일을 다운로드하여 처리하는 함수
 def decompress_datadog_logs(env, contact_id, instance_id,region):
