@@ -1186,7 +1186,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         try:
             if related_id and len(subgraph_nodes[related_id]) > 0 and len(subgraph_nodes[contact_id]) > 0:
                 dot.edge(subgraph_nodes[related_id][-1], subgraph_nodes[contact_id][0], label="Related", dir="none") 
-            elif prev_id and prev_id in subgraphs:
+            elif prev_id and prev_id in subgraphs and len(subgraph_nodes[prev_id]) > 0 and len(subgraph_nodes[contact_id]) > 0:
                 dot.edge(subgraph_nodes[prev_id][-1], subgraph_nodes[contact_id][0], label=contact.get("InitiationMethod")) 
         except Exception:
             print(traceback.format_exc())

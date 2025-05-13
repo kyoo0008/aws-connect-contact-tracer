@@ -8,6 +8,7 @@ import csv
 import re
 import pytz
 import datetime
+import botocore
 from datetime import datetime, timedelta
 
 
@@ -113,11 +114,11 @@ def decompress_gzip_from_s3(bucket_name, s3_key, region):
             print("📂 S3 key not found.")
         else:
             print(f"⚠️ Unhandled S3 error: {e}")
-        return []
+        return ""
 
     except Exception as e:
         print(f"❗ Unexpected error while fetching transcript: {e}")
-        return []
+        return ""
 
 # S3 경로에서 모든 파일을 다운로드하여 처리하는 함수
 def decompress_datadog_logs(env, contact_id, instance_id,region):
@@ -161,6 +162,9 @@ def decompress_datadog_logs(env, contact_id, instance_id,region):
     for key in s3_keys:
     # Gzip 파일을 복원하여 처리
         decompressed_text = decompress_gzip_from_s3(bucket_name, key, region)
+
+        if decompressed_text == "":
+            continue
 
         decompressed_text = decompressed_text.replace("}{","}\n{")
 
