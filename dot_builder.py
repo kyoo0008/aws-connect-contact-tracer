@@ -854,12 +854,16 @@ def build_lex_dot(contact_id):
             # 고객 node
             lex_nodes.append(customer_node_id)
 
+            intent_footer = ""
+            for intent in script.get("interpretations",[]):
+                intent_footer += f"{intent.get("intent",{})["name"]} : {intent.get("nluConfidence","")}\n"
+
             lex_dot.node(
                 customer_node_id,
                 label=get_node_label(
                     "customer", 
                     "customer", 
-                    wrap_transcript(script.get("inputTranscript","")), None, None),
+                    wrap_transcript(script.get("inputTranscript","")), intent_footer, None),
                 shape='box', 
                 style='rounded,filled',
                 color='lightgray',
@@ -881,7 +885,7 @@ def build_lex_dot(contact_id):
                 label=get_node_label(
                     "agent", 
                     "agent", 
-                    wrap_transcript(agent_transcript), None, None),
+                    wrap_transcript(agent_transcript), intent_footer, None),
                 shape='box', 
                 style='rounded,filled',
                 color='lightgray',
