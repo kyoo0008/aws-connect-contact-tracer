@@ -855,9 +855,22 @@ def build_lex_dot(contact_id):
             lex_nodes.append(customer_node_id)
 
             intent_footer = ""
-            for intent in script.get("interpretations",[]):
-                intent_footer += f"{intent.get("intent",{})["name"]} : {intent.get("nluConfidence","")}\n"
 
+            max_intent_nlu_confidence_score = 0.0
+            max_intent_nlu_confidence_name = ""
+
+
+            for intent in script.get("interpretations",[]):
+                # print(str(max_intent_nlu_confidence_score) + " / " + max_intent_nlu_confidence_name)
+                if float(intent.get("nluConfidence",0)) > max_intent_nlu_confidence_score:
+                    max_intent_nlu_confidence_score = float(intent.get("nluConfidence",0))
+                    max_intent_nlu_confidence_name = intent.get("intent",{})["name"]
+
+            for intent in script.get("interpretations",[]):
+                if max_intent_nlu_confidence_name == intent.get("intent",{})["name"]:
+                    intent_footer += f"* {intent.get("intent",{})["name"]} : {intent.get("nluConfidence","")}\n"
+                else:
+                    intent_footer += f"{intent.get("intent",{})["name"]} : {intent.get("nluConfidence","0.0")}\n"
             lex_dot.node(
                 customer_node_id,
                 label=get_node_label(
