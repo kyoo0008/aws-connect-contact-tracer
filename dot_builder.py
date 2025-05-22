@@ -395,75 +395,9 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
             if target_logs: # x-ray 추적 처리 
                 xray_trace_id = xid
+                dot,nodes,error_count = build_xray_dot(dot,nodes,error_count,xray_trace_id,connect_region,function_logs,log)
 
-                xray_trace = get_xray_trace(xray_trace_id, connect_region)
-                xray_text = ""
-                if len(xray_trace) > 0:
-                    # print(f"xray_trace : {xray_trace}")
-                    last_op = None
-                    index = 1
-                    for t in xray_trace:
-                        # print(t)
-                        op = None 
-                        if t.get("aws"):
-                            if t["aws"].get("operation"):
-                                if len(t["aws"].get("resource_names",[])) > 0:
-                                    op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
-                                else:
-                                    op = t["aws"]["operation"] + " " + t["name"] + '\n'
-
-                        if op != last_op:
-                            xray_text += f"Operation {index} : \n" + op
-                            last_op = op
-                            index += 1
-
-
-                # xray_trace_id가 있는 관련 로그 찾기
-                associated_lambda_logs = [l for l in function_logs if l.get("xray_trace_id") == xray_trace_id]
-
-                # print(f"associated_lambda_logs :{associated_lambda_logs}")
-
-                # xray trace dot
-                # associated_lambda_logs = associated_lambda_logs.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
-
-                xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs)
                 
-
-                # level 값 가져오기
-                levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
-                l_warn_count = 0
-                l_error_count = 0
-                for l in levels:
-                    if l == "ERROR":
-                        l_error_count += 1
-                    elif l == "WARN":
-                        l_warn_count += 1
-                        
-                color = 'tomato' if l_error_count > 0 or l_warn_count > 0 else 'lightgray'
-                lambda_node_footer = ((f"Warn : {l_warn_count}" if l_warn_count > 0 else "") + (f"\nError : {l_error_count}" if l_error_count > 0 else "")) if l_error_count > 0 or l_warn_count > 0 else None
-                node_id = f"{log.get("Timestamp").replace(":","").replace(".","")}_{xray_trace_id}"
-
-                # 노드 추가
-                dot.node(
-                    node_id,
-                    label=get_node_label(
-                        "xray",
-                        get_module_name_ko("xray", log) + "  ➡️",
-                        xray_text,
-                        lambda_node_footer,
-                        xray_trace_id
-                    ),
-                    shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
-                    style='rounded,filled',
-                    color=color,
-                    URL=f"{xray_trace_file}.dot"
-                )
-
-                nodes.append(node_id)
-
-                if l_error_count > 0 or l_warn_count > 0:
-                    error_count += (l_error_count+l_warn_count)
-
         except Exception:
             print(check_log)
             print(traceback.format_exc())
@@ -500,12 +434,12 @@ def get_segment_node(xray_dot,subdata,parent_id):
 def process_subsegments(xray_dot, json_data):
     if json_data.get("subsegments"):
         for data in json_data["subsegments"]:
-            if data.get("name") in ["Overhead","Dwell Time"]:
+            if data.get("name") in ["Overhead","Dwell Time", "Lambda"]:
                 continue
             if data.get("name") == "Invocation" or "Attempt" in data.get("name"):
                 if len(data.get("subsegments",[])) > 0:
                     for subdata in data.get("subsegments"):
-                        if subdata.get("name") in ["Overhead", "Dwell Time"]:
+                        if subdata.get("name") in ["Overhead", "Dwell Time", "Lambda"]:
                             continue
                         else:
                             xray_dot = get_segment_node(xray_dot,subdata,json_data.get("id"))            
@@ -577,7 +511,7 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
 
             if xray_batch_json_data.get("subsegments"):
                 for segment in xray_batch_json_data["subsegments"]:
-                    if segment["name"] == "Overhead":
+                    if segment["name"] in ["Overhead","Lambda"]:
 
                         icon_path = ""
                         if "AWS" in origin:
@@ -603,7 +537,14 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
 
     xray_nodes=[]
     if len(associated_lambda_logs) > 0:
-                
+        # CloudWatch.png
+        xray_dot.node(
+            xray_trace_id+"_raw_json",
+            label=get_image_label(f"{os.getcwd()}/mnt/aws/CloudWatch.png","Raw Json",30),
+            shape="plaintext",
+            URL=json.dumps(associated_lambda_logs,indent=4,ensure_ascii=False)
+            )
+
         for index,l in enumerate(associated_lambda_logs):
 
             color = 'tomato' if l.get("level") == "ERROR" or l.get("level") == "WARN" else 'lightgray'
@@ -651,8 +592,76 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
     
     return xray_trace_file
     
+def build_xray_dot(dot, nodes, error_count, xray_trace_id, connect_region, function_logs, log):
+    xray_trace = get_xray_trace(xray_trace_id, connect_region)
+    xray_text = ""
+    if len(xray_trace) > 0:
+        # print(f"xray_trace : {xray_trace}")
+        last_op = None
+        index = 1
+        for t in xray_trace:
+            # print(t)
+            op = None 
+            if t.get("aws"):
+                if t["aws"].get("operation"):
+                    if len(t["aws"].get("resource_names",[])) > 0:
+                        op = t["aws"]["operation"] + " " + t["aws"]["resource_names"][0] + '\n'
+                    else:
+                        op = t["aws"]["operation"] + " " + t["name"] + '\n'
+
+            if op != last_op:
+                xray_text += f"Operation {index} : \n" + op
+                last_op = op
+                index += 1
 
 
+    # xray_trace_id가 있는 관련 로그 찾기
+    associated_lambda_logs = [l for l in function_logs if l.get("xray_trace_id") == xray_trace_id]
+
+    # print(f"associated_lambda_logs :{associated_lambda_logs}")
+
+    # xray trace dot
+    # associated_lambda_logs = associated_lambda_logs.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
+
+    xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs)
+    
+
+    # level 값 가져오기
+    levels = [l.get("level", "INFO") for l in associated_lambda_logs]  # 기본값을 INFO로 설정
+    l_warn_count = 0
+    l_error_count = 0
+    for l in levels:
+        if l == "ERROR":
+            l_error_count += 1
+        elif l == "WARN":
+            l_warn_count += 1
+            
+    color = 'tomato' if l_error_count > 0 or l_warn_count > 0 else 'lightgray'
+    lambda_node_footer = ((f"Warn : {l_warn_count}" if l_warn_count > 0 else "") + (f"\nError : {l_error_count}" if l_error_count > 0 else "")) if l_error_count > 0 or l_warn_count > 0 else None
+    node_id = f"{log.get("Timestamp","").replace(":","").replace(".","")}_{xray_trace_id}"
+
+    # 노드 추가
+    dot.node(
+        node_id,
+        label=get_node_label(
+            "xray",
+            get_module_name_ko("xray", log) + "  ➡️",
+            xray_text,
+            lambda_node_footer,
+            xray_trace_id
+        ),
+        shape="plaintext",  # 테이블을 사용하기 위해 plaintext 사용
+        style='rounded,filled',
+        color=color,
+        URL=f"{xray_trace_file}.dot"
+    )
+
+    nodes.append(node_id)
+
+    if l_error_count > 0 or l_warn_count > 0:
+        error_count += (l_error_count+l_warn_count)
+
+    return dot, nodes, error_count
 
 # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
 def dup_block_sanitize(node_cache, dot, nodes):
@@ -831,7 +840,7 @@ def build_module_detail(logs, module_name,lambda_logs,module_error_count):
 
     return m_dot, nodes, module_error_count
 
-def build_lex_dot(contact_id):
+def build_lex_dot(contact_id,connect_region):
     lex_nodes=[]
     file_path = f"./virtual_env/lex_{contact_id}.json"
     lex_transcript = []
@@ -911,8 +920,42 @@ def build_lex_dot(contact_id):
         lex_dot = add_edges(lex_dot, lex_nodes)
         apply_rank(lex_dot, lex_nodes)
 
+        
+            
         lex_dot.render(f"./virtual_env/lex_{contact_id}", format="dot", cleanup=True)
     return lex_nodes
+
+def build_lex_hook_dot(contact_id,connect_region):
+    
+    nodes = []
+    error_count = 0 
+    lex_hook_func_log_path = f"./virtual_env/lex_hook_{contact_id}.json"
+    lex_hook_dot = Digraph(comment = "Lex Hook")
+    lex_hook_dot.attr(rankdir="LR")
+    
+
+    if os.path.isfile(lex_hook_func_log_path):
+        with open(lex_hook_func_log_path, "r", encoding="utf-8") as f:
+            function_logs = json.loads(f.read())
+            
+            xray_trace_ids = set()
+
+            for log in function_logs:
+                xray_trace_ids.add(log.get("xray_trace_id"))
+                
+            for xray_trace_id in xray_trace_ids:
+                
+                lex_hook_dot,nodes,error_count = build_xray_dot(lex_hook_dot,nodes,error_count,xray_trace_id,connect_region,function_logs,{})
+
+
+            lex_hook_dot = add_edges(lex_hook_dot, nodes)
+            apply_rank(lex_hook_dot, nodes)
+            lex_hook_dot.render(f"./virtual_env/lex_hook_{contact_id}", format="dot", cleanup=True)
+                
+                
+        return nodes, error_count
+    else:
+        return []
 
 def build_transcript_dot(env,contact_id,region,instance_id):
     transcript_nodes=[]
@@ -1086,8 +1129,6 @@ def build_main_flow(logs, lambda_logs, contact_id):
 
     return main_flow_dot, nodes
 
-
-
 # main 화면 생성 
 def build_main_contacts(selected_contact_id,associated_contacts,initiation_timestamp,region,log_group,env,instance_id):
     global connect_region
@@ -1138,7 +1179,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
                 URL=f"./virtual_env/transcript_{contact_id}.dot"
                 )
 
-        lex_nodes = build_lex_dot(contact_id)
+        lex_nodes = build_lex_dot(contact_id,connect_region)
 
         if len(lex_nodes) > 0:
             contact_graph.node(
@@ -1146,6 +1187,16 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
                 label=get_image_label(f"{os.getcwd()}/mnt/aws/Lex.png","Lex",30),
                 shape="plaintext",
                 URL=f"./virtual_env/lex_{contact_id}.dot"
+                )
+
+        lex_hook_nodes, _ = build_lex_hook_dot(contact_id,connect_region)
+
+        if len(lex_hook_nodes) > 0:
+            contact_graph.node(
+                contact_id+"_lex_hook",
+                label=get_image_label(f"{os.getcwd()}/mnt/aws/Lambda.png","Lex Hook",30),
+                shape="plaintext",
+                URL=f"./virtual_env/lex_hook_{contact_id}.dot"
                 )
 
 
