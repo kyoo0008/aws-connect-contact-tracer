@@ -988,7 +988,7 @@ def build_lex_hook_dot(contact_id,connect_region):
                 
         return nodes, error_count
     else:
-        return []
+        return [], 0
 
 def build_transcript_dot(env,contact_id,region,instance_id):
     transcript_nodes=[]
