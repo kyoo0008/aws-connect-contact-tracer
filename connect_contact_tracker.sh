@@ -75,6 +75,11 @@ else
   exit 1
 fi
 
+# 최신버전 Update
+git stash --include-untracked >/dev/null 2>&1
+git pull >/dev/null 2>&1
+git stash pop stash@{0} >/dev/null 2>&1
+
 if [[ $region_value == "ap-northeast-2" ]]; then
   # AWS 계정 ID 확인 및 instance alias 자동 설정
   account_id=$(aws sts get-caller-identity --query "Account" --output text)
