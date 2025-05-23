@@ -435,12 +435,12 @@ def get_segment_node(xray_dot,subdata,parent_id):
 def process_subsegments(xray_dot, json_data):
     if json_data.get("subsegments"):
         for data in json_data["subsegments"]:
-            if data.get("name") in ["Overhead","Dwell Time", "Lambda"]:
+            if data.get("name") in ["Overhead","Dwell Time", "Lambda", "QueueTime", "Initialization"]:
                 continue
             if data.get("name") == "Invocation" or "Attempt" in data.get("name"):
                 if len(data.get("subsegments",[])) > 0:
                     for subdata in data.get("subsegments"):
-                        if subdata.get("name") in ["Overhead", "Dwell Time", "Lambda"]:
+                        if subdata.get("name") in ["Overhead", "Dwell Time", "Lambda", "QueueTime", "Initialization"]:
                             continue
                         else:
                             xray_dot = get_segment_node(xray_dot,subdata,json_data.get("id"))            
@@ -455,14 +455,18 @@ def get_xray_edge_label(data):
     label = ""
     xlabel = ""
 
-    if data.get("name") == "SSM" or data.get("name") == "Connect" or data.get("name") == "SecretsManager" :
-        label += data["aws"]["operation"]
+    if data.get("name") in ["SSM", "Connect", "SecretsManager", "SQS", "S3"] :
+        
+        if data["aws"].get("resource_names"):
+            label += f"{data["aws"]["operation"]}\n{data["aws"]["resource_names"][0].split("/")[-1]}"
+        else:
+            label += data["aws"]["operation"]
     elif data.get("name") == "DynamoDB":
         if data["aws"].get("table_name"):
             label += f"{data["aws"]["operation"]}\n{data["aws"]["table_name"]}"
         else:
             label += f"{data["aws"]["operation"]}"
-    elif "." in data.get("name"):
+    elif "." in data.get("name"): # URL
         label += f"{data["http"]["request"]["method"]}\n{"/".join(data["http"]["request"]["url"].split("/")[3:])}"
         if data["http"].get("response"):
             if not str(data["http"]["response"]["status"]).startswith("2"):
