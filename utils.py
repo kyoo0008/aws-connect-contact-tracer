@@ -6,7 +6,8 @@ import pytz
 import boto3
 import os
 import subprocess
-
+from dateutil import parser
+import bisect
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -466,3 +467,42 @@ def get_bot_name_from_alias_arn(alias_arn: str) -> str:
     bot_info = lex.describe_bot(botId=bot_id)
 
     return bot_info['botName']
+
+def find_lex_xray_timestamp(lex_entry,hook_logs):
+    # Hook 로그에서 timestamp와 xray_trace_id 추출
+    hook_entries = sorted(
+        [
+            (parser.isoparse(entry["timestamp"]), entry["xray_trace_id"])
+            for entry in hook_logs
+            if "timestamp" in entry and "xray_trace_id" in entry
+        ],
+        key=lambda x: x[0]
+    )
+    hook_timestamps = [entry[0] for entry in hook_entries]
+    hook_trace_ids = [entry[1] for entry in hook_entries]
+
+    lex_time = parser.isoparse(lex_entry["timestamp"])
+
+    # hook 로그 중 가장 가까운 timestamp 검색
+    pos = bisect.bisect_left(hook_timestamps, lex_time)
+    candidates = []
+    if pos < len(hook_timestamps):
+        candidates.append((abs(hook_timestamps[pos] - lex_time), hook_trace_ids[pos]))
+    if pos > 0:
+        candidates.append((abs(hook_timestamps[pos - 1] - lex_time), hook_trace_ids[pos - 1]))
+    
+    if candidates:
+        closest_trace_id = min(candidates, key=lambda x: x[0])[1]
+        return closest_trace_id
+    else:
+        return ""
+
+    
+    #     results.append({
+    #         "lex_timestamp": lex_time.isoformat(),
+    #         "closest_xray_trace_id": closest_trace_id
+    #     })
+
+    # # 결과 출력
+    # for r in results:
+    #     print(f"Lex Time: {r['lex_timestamp']} -> Closest X-Ray Trace ID: {r['closest_xray_trace_id']}")

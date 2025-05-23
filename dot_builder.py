@@ -21,7 +21,8 @@ from utils import generate_node_ids, \
                     get_xray_trace, \
                     check_json_file_exists, \
                     filter_lambda_logs, \
-                    wrap_transcript
+                    wrap_transcript, \
+                    find_lex_xray_timestamp
 from describe_flow import get_comparison_value, \
                     get_contact_attributes
 from fetch_data_from_s3 import get_analysis_object
@@ -555,10 +556,15 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
                 param_json = l.get("parameters",{})
                 for key in param_json:
                     node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
+                if "lex" in l.get("message",""):
+                    node_text += f"intent : {l.get("intent","")}"
             elif "attribute" in l.get("message",""):
                 param_json = l.get("attributes",{})
                 for key in param_json:
                     node_text += f"{wrap_text(f"{key} : {param_json[key]}",is_just_cut=True,max_length=25)}\n"
+            elif "lex" in l.get("message",""):
+                node_text += l.get("message","").replace("]","]\n")
+                node_text += l.get("event",{}).get("inputTranscript","")
             else:
                 node_text += l.get("message","").replace("]","]\n")
 
@@ -851,10 +857,17 @@ def build_lex_dot(contact_id,connect_region):
     else:
         return []
 
+    # To-do : xray 여러개 뽑기
+    lex_hook_func_log_path = f"./virtual_env/lex_hook_{contact_id}.json"
+    if os.path.isfile(lex_hook_func_log_path):
+        with open(lex_hook_func_log_path, "r", encoding="utf-8") as f:
+            function_logs = json.loads(f.read())
+
     if len(lex_transcript) > 0:
 
         lex_dot = Digraph(comment = "Transcript")
         lex_dot.attr(rankdir="LR")
+        
         
 
         for index,script in enumerate(lex_transcript):
@@ -880,6 +893,9 @@ def build_lex_dot(contact_id,connect_region):
                     intent_footer += f"* {intent.get("intent",{})["name"]} : {intent.get("nluConfidence","")}\n"
                 else:
                     intent_footer += f"{intent.get("intent",{})["name"]} : {intent.get("nluConfidence","0.0")}\n"
+
+
+            # 고객 Node
             lex_dot.node(
                 customer_node_id,
                 label=get_node_label(
@@ -891,6 +907,23 @@ def build_lex_dot(contact_id,connect_region):
                 color='lightgray',
                 URL=str(json.dumps(script, indent=4, ensure_ascii=False))
             )
+
+            
+            # if "CodeHook" in str(json.dumps(script)) or :
+            
+            xray_trace_id = find_lex_xray_timestamp(script,function_logs)
+
+            isTranscriptFound = False
+            for l in function_logs:
+                if l.get("xray_trace_id") == xray_trace_id and l.get("event",{}).get("inputTranscript") == script.get("inputTranscript"):
+                    isTranscriptFound = True
+
+            
+            # xray_trace_id = xid
+            if xray_trace_id != "" and isTranscriptFound:
+                lex_dot,lex_nodes,_ = build_xray_dot(lex_dot,lex_nodes,0,xray_trace_id,connect_region,function_logs,{})
+
+            
 
             # AI 상담사 Node
             agent_node_id = script.get("requestId")+"-agent"
@@ -929,11 +962,11 @@ def build_lex_hook_dot(contact_id,connect_region):
     
     nodes = []
     error_count = 0 
-    lex_hook_func_log_path = f"./virtual_env/lex_hook_{contact_id}.json"
+    
     lex_hook_dot = Digraph(comment = "Lex Hook")
     lex_hook_dot.attr(rankdir="LR")
     
-
+    lex_hook_func_log_path = f"./virtual_env/lex_hook_{contact_id}.json"
     if os.path.isfile(lex_hook_func_log_path):
         with open(lex_hook_func_log_path, "r", encoding="utf-8") as f:
             function_logs = json.loads(f.read())
