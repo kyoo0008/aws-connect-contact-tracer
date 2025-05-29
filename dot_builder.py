@@ -27,7 +27,7 @@ from describe_flow import get_comparison_value, \
                     get_contact_attributes
 from fetch_data_from_s3 import get_analysis_object
 import traceback
-import pandas as pd
+
 
 # Error 로 인식하는 Results Keyword
 ERROR_KEYWORDS = [
