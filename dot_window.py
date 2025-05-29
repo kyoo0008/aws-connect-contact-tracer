@@ -154,7 +154,7 @@ class AttributeTable(Gtk.Window):
         columns = ["Key", "Value", "Contact Flow", "Identifier"]
         for i, column_title in enumerate(columns):
             renderer = Gtk.CellRendererText()
-            renderer.set_property("wrap-mode", Gtk.WrapMode.WORD_CHAR)
+            # renderer.set_property("wrap-mode", Gtk.WrapMode.WORD_CHAR)
             renderer.set_property("wrap-width", 400 if column_title == "Value" else 200)
             
             column = Gtk.TreeViewColumn(column_title, renderer, text=i)
