@@ -1,7 +1,7 @@
 import xdot.ui
 import json
 from gi.repository import Gtk
-
+import ast
 
 class DotWindowBase(xdot.ui.DotWindow):
     """공통 DotWindow 로직을 포함한 기본 클래스"""
@@ -23,7 +23,7 @@ class TextViewDialog(Gtk.Window):
 
     def __init__(self, title, text):
         super().__init__(title=title)
-        self.set_default_size(500, 800)
+        self.set_default_size(700, 800)
         self.set_position(Gtk.WindowPosition.CENTER)
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -54,9 +54,14 @@ class MainDotWindow(DotWindowBase):
             print(f"서브 플로우 열기: {sub_file}")
             SubDotWindow(sub_file)
         else:
-            json_text = json.dumps(sub_file, indent=4, ensure_ascii=False) if isinstance(sub_file, dict) else sub_file
-            print(f"노드 클릭됨: \n{json_text}")
-            TextViewDialog("노드 정보", json_text)
+            if isinstance(sub_file, dict):
+                json_text = json.dumps(sub_file, indent=4, ensure_ascii=False) 
+                print(f"노드 클릭됨: \n{json_text}")
+                TextViewDialog("노드 정보", json_text)
+            else:
+                json_text = ast.literal_eval(sub_file)
+                # print(f"노드 클릭됨: \n{json_text}")
+                AttributeTable(json_text)
 
 
 
@@ -120,3 +125,53 @@ class SubDotTranscriptWindow(DotWindowBase):
             TextViewDialog("노드 정보", json_text)
         except Exception as e:
             print(f"SubDotXrayWindow 표시 오류: {e}")
+
+
+class AttributeTable(Gtk.Window):
+    def __init__(self, data):
+        Gtk.Window.__init__(self, title="Contact Attributes")
+        self.set_default_size(1200, 900)
+        self.set_border_width(10)
+
+
+        # Create a ListStore with 4 string columns
+        self.store = Gtk.ListStore(str, str, str, str)
+        for item in data:
+            self.store.append([
+                item["k"],
+                item["v"],
+                item["c"],
+                item["i"]
+            ])
+
+        
+        sorted_model = Gtk.TreeModelSort(model=self.store)
+        sorted_model.set_sort_column_id(0, Gtk.SortType.ASCENDING)
+
+        # Create the TreeView using the store
+
+        treeview = Gtk.TreeView(model=sorted_model)
+        columns = ["Key", "Value", "Contact Flow", "Identifier"]
+        for i, column_title in enumerate(columns):
+            renderer = Gtk.CellRendererText()
+            renderer.set_property("wrap-mode", Gtk.WrapMode.WORD_CHAR)
+            renderer.set_property("wrap-width", 400 if column_title == "Value" else 200)
+            
+            column = Gtk.TreeViewColumn(column_title, renderer, text=i)
+            column.set_resizable(True)
+            column.set_min_width(400 if column_title == "Value" else 150)
+            treeview.append_column(column)
+
+        # 스크롤 가능하게 감싸고 테두리도 추가
+        frame = Gtk.Frame()
+        frame.set_shadow_type(Gtk.ShadowType.IN)
+        frame.set_label("📋 Contact Attribute Details")
+        frame.set_label_align(0.5, 0.5)
+
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled_window.add(treeview)
+
+        frame.add(scrolled_window)
+        self.add(frame)
+        self.show_all()

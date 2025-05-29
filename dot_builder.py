@@ -27,6 +27,7 @@ from describe_flow import get_comparison_value, \
                     get_contact_attributes
 from fetch_data_from_s3 import get_analysis_object
 import traceback
+import pandas as pd
 
 # Error 로 인식하는 Results Keyword
 ERROR_KEYWORDS = [
@@ -1202,6 +1203,10 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
 
         logs, lambda_logs, contact_flow_ids = fetch_logs(contact_id,initiation_timestamp,region,log_group,env,instance_id)
 
+        # with open("test.json", "w", encoding="utf-8") as f:
+        #     f.write(json.dumps(logs, indent=2, ensure_ascii=False))
+        #     f.close()
+
         # Graph 생성 시작
         contact_graph, nodes = build_main_flow(logs, lambda_logs, contact_id)
 
@@ -1252,16 +1257,49 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
             InitialContactId=contact_id
         )
 
-        # print(f"contact_attributes : \n{response["Attributes"]}")
+
+
+        contact_attrs = response["Attributes"]
+
+
+        data = []
+
+        for k,v in contact_attrs.items():
+            is_exists = False
+            for log in logs:
+                if log.get("ContactFlowModuleType") == "SetAttributes" and "Parameters" in log:
+                    key = log["Parameters"].get("Key")
+                    value = log["Parameters"].get("Value")
+                    if key == k:
+                        is_exists = True
+                        break
+            if is_exists == False:
+                data.append({
+                    "k": k,
+                    "v": v,
+                    "c": "",
+                    "i": ""
+                })
+            else:
+                data.append({
+                    "k": k,
+                    "v": v,
+                    "c": log.get("ContactFlowName"),
+                    "i": log.get("Identifier")
+                })
+
+        # To-do : pandas word wrap
+        # df = pd.DataFrame(data)
+        # print(df.to_string(index=False))
+        # print(data)
         contact_graph.node(
                 contact_id+"_attributes",
                 label=get_image_label(f"{os.getcwd()}/mnt/img/SetAttributes.png","Attributes",30),
                 shape="plaintext",
-                URL=str(json.dumps(response["Attributes"], indent=2, sort_keys=True, ensure_ascii=False))
+                # URL=str(json.dumps(response["Attributes"], indent=2, sort_keys=True, ensure_ascii=False))
+                URL=f'{data}'
                 )
-        # for key in attributes.keys():
-            
-        # content = json.loads(file_name)
+        
 
 
         subgraphs[contact_id].subgraph(contact_graph)
