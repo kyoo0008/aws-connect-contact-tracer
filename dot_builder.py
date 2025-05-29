@@ -1171,6 +1171,7 @@ def build_main_flow(logs, lambda_logs, contact_id):
 def build_main_contacts(selected_contact_id,associated_contacts,initiation_timestamp,region,log_group,env,instance_id):
     global connect_region
     connect_region = region
+    client = boto3.client("connect", region_name=region)
 
     search_contacts = associated_contacts["ContactSummaryList"] if ASSOCIATED_CONTACTS_FLAG else [l for l in associated_contacts["ContactSummaryList"] if l.get("ContactId") == selected_contact_id]
 
@@ -1182,12 +1183,16 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
 
     subgraphs = {}
     subgraph_nodes = {}
-
+    subcontact_logs = {}
+    subcontact_lambda_logs = {}
+    subcontact_attr = {}
 
     root_contact_ids = {}
-    for contact in search_contacts:
+    
 
+    for contact in search_contacts:
         contact_id = contact.get("ContactId")
+
         channel = contact.get("Channel")
 
         if not contact_id:
@@ -1195,17 +1200,71 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         label = f"Contact Id : {contact_id} ✅ \nChannel : {channel}" if selected_contact_id == contact_id else f"Contact Id : {contact_id} \nChannel : {channel}"
         subgraphs[contact_id] = Digraph(f"cluster_{contact_id}")
         subgraphs[contact_id].attr(label=label)
-
-    for contact in search_contacts:
-        contact_id = contact.get("ContactId")
         if not contact_id:
             continue
 
         logs, lambda_logs, contact_flow_ids = fetch_logs(contact_id,initiation_timestamp,region,log_group,env,instance_id)
+        subcontact_logs[contact_id] = logs
+        subcontact_lambda_logs[contact_id] = lambda_logs
 
-        # with open("test.json", "w", encoding="utf-8") as f:
-        #     f.write(json.dumps(logs, indent=2, ensure_ascii=False))
-        #     f.close()
+        response = client.get_contact_attributes(
+            InstanceId=instance_id,
+            InitialContactId=contact_id
+        )
+
+        contact_attrs = response["Attributes"]
+
+
+        data = []
+
+        for k,v in contact_attrs.items():
+            is_exists = False
+            for log in logs:
+                if log.get("ContactFlowModuleType") == "SetAttributes" and "Parameters" in log:
+                    key = log["Parameters"].get("Key")
+                    value = log["Parameters"].get("Value")
+                    if key == k:
+                        is_exists = True
+                        break
+            if is_exists == False:
+                data.append({
+                    "k": k,
+                    "v": v,
+                    "c": "",
+                    "i": ""
+                })
+            else:
+                data.append({
+                    "k": k,
+                    "v": v,
+                    "c": log.get("ContactFlowName"),
+                    "i": log.get("Identifier")
+                })
+
+        subcontact_attr[contact_id] = data
+
+    for my_id, my_data in subcontact_attr.items():
+        for entry in my_data:
+            if entry["v"] and entry["c"] and entry["i"]:  
+                continue
+
+            for other_id, other_data in subcontact_attr.items():
+                if other_id == my_id:
+                    continue  
+
+                for other_entry in other_data:
+                    if other_entry["k"] == entry["k"] and other_entry["v"] == entry["v"]:
+
+                        entry["v"] = other_entry["v"]
+                        entry["c"] = other_entry["c"]
+                        entry["i"] = other_entry["i"]
+                        break  
+
+
+    for contact in search_contacts:
+        contact_id = contact.get("ContactId")
+        logs = subcontact_logs[contact_id]
+        lambda_logs = subcontact_lambda_logs[contact_id]
 
         # Graph 생성 시작
         contact_graph, nodes = build_main_flow(logs, lambda_logs, contact_id)
@@ -1242,62 +1301,13 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
                 )
 
 
-
-        # Attribute Node 생성
-        result_flow_ids = []
-        for fid in contact_flow_ids:
-            result_flow_ids.append(fid.split("/")[-1])
-
-
-
-        client = boto3.client("connect", region_name=region)
-
-        response = client.get_contact_attributes(
-            InstanceId=instance_id,
-            InitialContactId=contact_id
-        )
-
-
-
-        contact_attrs = response["Attributes"]
-
-
-        data = []
-
-        for k,v in contact_attrs.items():
-            is_exists = False
-            for log in logs:
-                if log.get("ContactFlowModuleType") == "SetAttributes" and "Parameters" in log:
-                    key = log["Parameters"].get("Key")
-                    value = log["Parameters"].get("Value")
-                    if key == k:
-                        is_exists = True
-                        break
-            if is_exists == False:
-                data.append({
-                    "k": k,
-                    "v": v,
-                    "c": "",
-                    "i": ""
-                })
-            else:
-                data.append({
-                    "k": k,
-                    "v": v,
-                    "c": log.get("ContactFlowName"),
-                    "i": log.get("Identifier")
-                })
-
-        # To-do : pandas word wrap
-        # df = pd.DataFrame(data)
-        # print(df.to_string(index=False))
-        # print(data)
+                
         contact_graph.node(
                 contact_id+"_attributes",
                 label=get_image_label(f"{os.getcwd()}/mnt/img/SetAttributes.png","Attributes",30),
                 shape="plaintext",
                 # URL=str(json.dumps(response["Attributes"], indent=2, sort_keys=True, ensure_ascii=False))
-                URL=f'{data}'
+                URL=f'{subcontact_attr[contact_id]}'
                 )
         
 

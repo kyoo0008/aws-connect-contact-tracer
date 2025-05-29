@@ -58,7 +58,7 @@ class MainDotWindow(DotWindowBase):
                 json_text = json.dumps(sub_file, indent=4, ensure_ascii=False) 
                 print(f"노드 클릭됨: \n{json_text}")
                 TextViewDialog("노드 정보", json_text)
-            else:
+            else: # contact attributes
                 json_text = ast.literal_eval(sub_file)
                 # print(f"노드 클릭됨: \n{json_text}")
                 AttributeTable(json_text)

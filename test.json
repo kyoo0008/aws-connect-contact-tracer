@@ -1,0 +1,1536 @@
+{
+  "80700166-80b3-4994-b230-93ecd8af30bb": [
+    {
+      "k": "Out_of_Hours_Treatment",
+      "v": "Disconnect",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "IVR_Flow_Test_Arn",
+      "v": "arn:aws:connect:ap-northeast-2:590183945142:instance/41810ec8-c661-4972-b81c-59976d316de9/contact-flow/ec7ec12a-08c3-4e64-a6c4-c02b72001e7e",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Holiday_Flag",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "PIC_Center",
+      "v": "SELRS",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "authName",
+      "v": "false",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Var_Auth_Name_False"
+    },
+    {
+      "k": "Abnormal_Flight_Operation_Customer_Inactive_Period",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Scheduled_Callback_Queue_Name",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Search_Profile_Result",
+      "v": "1",
+      "c": "MOD_SBS_Identification_v3",
+      "i": "Set_Matched_Profile_Info"
+    },
+    {
+      "k": "AgentGroupOrDesk",
+      "v": "TEAM2",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "PIC_Enable_Main_Service",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Vars_Used_group_button_IconName",
+      "v": "status-negative",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Vars_Variable_No"
+    },
+    {
+      "k": "EWTSecond",
+      "v": "10",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Initiated_Agent_User_Name",
+      "v": "GQKB003060@kalmate.net",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "ServiceType",
+      "v": "DOM",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Skypass_Number_group_button_Variant",
+      "v": "normal",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_Skypass_Auth"
+    },
+    {
+      "k": "authDOB",
+      "v": "false",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Var_Auth_DOB_False"
+    },
+    {
+      "k": "Preferred_Customer_Inactive_Period",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Abandon_Call_Inactive_Period",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "authSkypass",
+      "v": "false",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Var_Auth_Skypass_False"
+    },
+    {
+      "k": "Contact_Direction",
+      "v": "INBOUND",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "DOB_Authenticated",
+      "v": "true",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Business_Hours_Time_Range",
+      "v": "07:00-19:00",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "ThresholdMinute",
+      "v": "1666",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Vars_Push_OnOff",
+      "v": "on",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Skypass_Number",
+      "v": "112514813421",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "EWT_Active_Flag",
+      "v": "true",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Homepage_Id",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Initiated_Agent_Queue",
+      "v": "SELRS_KOR_Main_DOM",
+      "c": "MOD_SBS_Identification_v3",
+      "i": "Set_Initiated_Agent_Queue_Name"
+    },
+    {
+      "k": "Log_Message",
+      "v": "[ERROR][VARS] Start call failed",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Imminent_Flight_Customer_Inactive_Period",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Lunch_Treatment",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Abandon_Call_Active_Flag",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Country",
+      "v": "KR",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "IDandV_Prompt_Flag",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "IVR_Flow_Arn",
+      "v": "arn:aws:connect:ap-northeast-2:590183945142:instance/41810ec8-c661-4972-b81c-59976d316de9/contact-flow/ec7ec12a-08c3-4e64-a6c4-c02b72001e7e",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Transferring_Agent_Name",
+      "v": "전/미현",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "LastAction",
+      "v": "Main",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "LastAction __ Main"
+    },
+    {
+      "k": "Callback_SMS_Send_Time",
+      "v": "0",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "AgentARN",
+      "v": "arn:aws:connect:ap-northeast-2:590183945142:instance/41810ec8-c661-4972-b81c-59976d316de9/agent/6971c8aa-d53c-485b-8470-024e2b36913b",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "AgentCenter",
+      "v": "SELRS",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Callback_Hours",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "AppLaunchContact",
+      "v": "{\"AutoOpen\":\"true\"}",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_AppLaunch"
+    },
+    {
+      "k": "Previous_Contact_Id",
+      "v": "80700166-80b3-4994-b230-93ecd8af30bb",
+      "c": "MOD_SBS_Identification_v3",
+      "i": "Set_Contact_Ids"
+    },
+    {
+      "k": "Current_Contact_Id_For_SBS",
+      "v": "1ec03f5b-58b4-4401-8552-749dd7482ff3",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "High_Revenue_Customer_Inactive_Period",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "IVR_Flow",
+      "v": "03_SELRS-IVR",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Initiated_Agent_Name",
+      "v": "전/미현",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "DOB_group_button_Variant",
+      "v": "primary",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_DOB_Auth"
+    },
+    {
+      "k": "Imminent_Flight_Customer_Judge_Hours",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Personal_Information_Consent",
+      "v": "true",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Callback_SMS_TemplateId",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "SBSCallType",
+      "v": "Inbound",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variable_SBSCallType_Inbound"
+    },
+    {
+      "k": "Skypass_Membership_ID",
+      "v": "112514813421",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Callback_Type",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Scheduled_Callback_Limit",
+      "v": "0",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "EWTMinute",
+      "v": "0",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Preferred_Customer_Members",
+      "v": "[]",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Queue_Name",
+      "v": "SELRS_KOR_Main_DOM",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "authEmail",
+      "v": "false",
+      "c": "MOD_SBS_Verification_v3",
+      "i": "Set_Display_Email_Not_Authenticated_By_Default"
+    },
+    {
+      "k": "Skypass_Membership",
+      "v": "true",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "IVR_Flow_Test",
+      "v": "03_SELRS-IVR",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Language_Code",
+      "v": "ko-KR",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Membership_Level",
+      "v": "MP",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "ThresholdSecond",
+      "v": "49",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Imminent_Flight_Customer_Active_Flag",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Abnormal_Flight_Operation_Customer_Judge_Hours",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Abandon_Call_History_Minutes",
+      "v": "0",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Matched_Profile_Id",
+      "v": "6d5a1988576d4a54b4177e91ff96e419",
+      "c": "MOD_SBS_Identification_v3",
+      "i": "Set_Matched_Profile_Info"
+    },
+    {
+      "k": "Transferring_Agent_User_Name",
+      "v": "GQKB003060@kalmate.net",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Name_Authenticated_group_button_IconName",
+      "v": "status-info",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_Name_Auth"
+    },
+    {
+      "k": "Pre_Queue_Message_Flag_1",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "ContactFlow",
+      "v": "Entry>MOD_Journey_Configuration>MOD_Language>Main>SELRS-IVR>MOD_DNISAnnouncement>MOD_Language>MOD_EmergencyAnnouncement>PreQueue>MOD_Profile_ID&V>MOD_GetRoutingPriority>MOD_Skypass>Mod_EWT>MOD_SetRoutingPriority>MOD_SpecialHandling>CustomerQueue",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Pre_Queue_Message_Flag_2",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Pre_Queue_Message_Flag_3",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Skypass_Number_Authenticated",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "CallBack_SMS_Active_Flag",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Callback_SMS_Language_Code",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "High_Revenue_Customer_Grades",
+      "v": "[]",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Vars_Used_Contact_Attribute",
+      "v": "No",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Vars_Variable_No"
+    },
+    {
+      "k": "Current_Contact_id",
+      "v": "80700166-80b3-4994-b230-93ecd8af30bb",
+      "c": "MOD_SBS_Identification_v3",
+      "i": "Set_Contact_Ids"
+    },
+    {
+      "k": "AgentCompany",
+      "v": "SELBPO",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "EWT_Thres_Hold1",
+      "v": "30",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "IVR_Flow_Test_Percent",
+      "v": "0%",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "EWT_Thres_Hold2",
+      "v": "99999",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Email_Authenticated_group_button_IconName",
+      "v": "status-negative",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_Email_Auth"
+    },
+    {
+      "k": "BCP_Flag",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "CallBack_Active_Flag",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "TimeZone_Value",
+      "v": "Asia/Seoul",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Initial_Contact_Id",
+      "v": "80700166-80b3-4994-b230-93ecd8af30bb",
+      "c": "MOD_SBS_Identification_v3",
+      "i": "Set_Contact_Ids"
+    },
+    {
+      "k": "Lunch_Hours",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Skypass_Tier",
+      "v": "MP",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_Available_Count",
+      "v": "1",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "IDnV_Entered_Value",
+      "v": "480912",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Routing_Priority_Adjustment",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Business_Hours",
+      "v": "true",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Vars_OnOff",
+      "v": "on",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Preferred_Customer_Active_Flag",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "High_Revenue_Customer_Active_Flag",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Customer_Number",
+      "v": "+821067001370",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "DOB_group_button_IconName",
+      "v": "status-info",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_DOB_Auth"
+    },
+    {
+      "k": "One_Id_Number",
+      "v": "S199212102082768",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Abnormal_Flight_Operation_Customer_Active_Flag",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Language",
+      "v": "ko-KR",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "EWT_Callback_Time",
+      "v": "0",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "High_Value_Tag",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Skypass_Number_group_button_IconName",
+      "v": "status-negative",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_Skypass_Auth"
+    },
+    {
+      "k": "Vars_Used_group_button_Variant",
+      "v": "normal",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Vars_Variable_No"
+    },
+    {
+      "k": "Contact_Channel",
+      "v": "VOICE",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "EWT",
+      "v": "10",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Name_Authenticated",
+      "v": "true",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Name_Authenticated_group_button_Variant",
+      "v": "primary",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_Name_Auth"
+    },
+    {
+      "k": "Abandon_Call_Queue_Wait_Seconds",
+      "v": "0",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Service_Number",
+      "v": "+82269269244",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "AgentTeam",
+      "v": "DOM-HS-ITX",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Email_Authenticated_group_button_Variant",
+      "v": "normal",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Initial_Variables_Email_Auth"
+    },
+    {
+      "k": "FromCenter",
+      "v": "SELRS",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "PIC_Business_Hours",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "authFalse",
+      "v": "false",
+      "c": "SBS_Main_Inbound-v4",
+      "i": "Set_Var_Auth_Email_False"
+    },
+    {
+      "k": "Connected_Agent_User_Name",
+      "v": "GQKB003060@kalmate.net",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Call_Recording_Flag",
+      "v": "true",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "PIC_Enable_Y_N",
+      "v": "false",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "FullName",
+      "v": "HAM/YOUNGJO ",
+      "c": "MOD_SBS_Identification_v3",
+      "i": "Set_Matched_Profile_Info"
+    },
+    {
+      "k": "Scheduled_Callback_Queue_ARN",
+      "v": "",
+      "c": "",
+      "i": ""
+    }
+  ],
+  "1ec03f5b-58b4-4401-8552-749dd7482ff3": [
+    {
+      "k": "Out_of_Hours_Treatment",
+      "v": "Disconnect",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "IVR_Flow_Test_Arn",
+      "v": "arn:aws:connect:ap-northeast-2:590183945142:instance/41810ec8-c661-4972-b81c-59976d316de9/contact-flow/ec7ec12a-08c3-4e64-a6c4-c02b72001e7e",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "Holiday_Flag",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "PIC_Center",
+      "v": "SELRS",
+      "c": "03_SELRS-IVR",
+      "i": "Attribute_serviceType_KR_DOM"
+    },
+    {
+      "k": "Abnormal_Flight_Operation_Customer_Inactive_Period",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Agent_Customer_High_Value",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Scheduled_Callback_Queue_Name",
+      "v": "",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Search_Profile_Result",
+      "v": "1",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Matched_Profile_Id and Search_Profile_1"
+    },
+    {
+      "k": "AgentGroupOrDesk",
+      "v": "TEAM2",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "PIC_Enable_Main_Service",
+      "v": "false",
+      "c": "MOD_PICActivateCheck",
+      "i": "Attribut_PIC-Setting"
+    },
+    {
+      "k": "EWTSecond",
+      "v": "10",
+      "c": "MOD_EWT",
+      "i": "Set_Attribute1"
+    },
+    {
+      "k": "Initiated_Agent_User_Name",
+      "v": "GQKB003060@kalmate.net",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "ServiceType",
+      "v": "DOM",
+      "c": "03_SELRS-IVR",
+      "i": "Attribute_serviceType_KR_DOM"
+    },
+    {
+      "k": "Preferred_Customer_Inactive_Period",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Agent_WrapUp_PNR_Sub",
+      "v": "69ONT7",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Abandon_Call_Inactive_Period",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_Contact_Visual_ARS_Used",
+      "v": "Unused",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_Ai_Summary_DispositionCode_1",
+      "v": "사전좌석배정",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Contact_Direction",
+      "v": "INBOUND",
+      "c": "01_Entry",
+      "i": "Attribute_contactChannel"
+    },
+    {
+      "k": "DOB_Authenticated",
+      "v": "true",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Authenticated_DOB_and_Name"
+    },
+    {
+      "k": "Business_Hours_Time_Range",
+      "v": "07:00-19:00",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "ThresholdMinute",
+      "v": "1666",
+      "c": "MOD_EWT",
+      "i": "Set_AttributeThreshold"
+    },
+    {
+      "k": "Vars_Push_OnOff",
+      "v": "on",
+      "c": "MOD_VisualARS_Init",
+      "i": "Vars Init - Set VARS usage response"
+    },
+    {
+      "k": "Skypass_Number",
+      "v": "112514813421",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Set membership info"
+    },
+    {
+      "k": "EWT_Active_Flag",
+      "v": "true",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_WrapUp_TKT_Main",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Homepage_Id",
+      "v": "",
+      "c": "MOD_Skypass",
+      "i": "Set high value and membership from IDnV"
+    },
+    {
+      "k": "Initiated_Agent_Queue",
+      "v": "SELRS_KOR_Main_DOM",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "Log_Message",
+      "v": "[ERROR][VARS] Start call failed",
+      "c": "MOD_VisualARS_Init",
+      "i": "Set error message for startcall"
+    },
+    {
+      "k": "Imminent_Flight_Customer_Inactive_Period",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Lunch_Treatment",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_WrapUp_Caller_Is_Customer",
+      "v": "True",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Abandon_Call_Active_Flag",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Country",
+      "v": "KR",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "IDandV_Prompt_Flag",
+      "v": "",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "IVR_Flow_Arn",
+      "v": "arn:aws:connect:ap-northeast-2:590183945142:instance/41810ec8-c661-4972-b81c-59976d316de9/contact-flow/ec7ec12a-08c3-4e64-a6c4-c02b72001e7e",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "Transferring_Agent_Name",
+      "v": "전/미현",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "Agent_Authenticated_Email",
+      "v": "Unchecked",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Callback_SMS_Send_Time",
+      "v": "0",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "AgentARN",
+      "v": "arn:aws:connect:ap-northeast-2:590183945142:instance/41810ec8-c661-4972-b81c-59976d316de9/agent/6971c8aa-d53c-485b-8470-024e2b36913b",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "AgentCenter",
+      "v": "SELRS",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "Callback_Hours",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Current_Contact_Id_For_SBS",
+      "v": "1ec03f5b-58b4-4401-8552-749dd7482ff3",
+      "c": "05_CustomerQueue",
+      "i": "setContactAttribute"
+    },
+    {
+      "k": "Agent_Customer_Name",
+      "v": "HAM/YOUNGJO 함 영조",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "High_Revenue_Customer_Inactive_Period",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "IVR_Flow",
+      "v": "03_SELRS-IVR",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "Initiated_Agent_Name",
+      "v": "전/미현",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "Imminent_Flight_Customer_Judge_Hours",
+      "v": "",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Agent_Contact_Timestamp_CenterTimezone",
+      "v": "2025-05-27T10:07:50",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Personal_Information_Consent",
+      "v": "true",
+      "c": "MOD_Skypass",
+      "i": "Set high value and membership from IDnV"
+    },
+    {
+      "k": "Callback_SMS_TemplateId",
+      "v": "",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_Ai_Summary_Keyword_1",
+      "v": "사전좌석배정",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_Ai_Summary_Keyword_2",
+      "v": "부부동행",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Skypass_Membership_ID",
+      "v": "112514813421",
+      "c": "MOD_Skypass",
+      "i": "Set high value and membership from IDnV"
+    },
+    {
+      "k": "Callback_Type",
+      "v": "",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Scheduled_Callback_Limit",
+      "v": "0",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_Contact_Flow_Path",
+      "v": "SELRS_KOR_Main_DOM",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "EWTMinute",
+      "v": "0",
+      "c": "MOD_EWT",
+      "i": "Set_Attribute1"
+    },
+    {
+      "k": "Preferred_Customer_Members",
+      "v": "[]",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Queue_Name",
+      "v": "SELRS_KOR_Main_DOM",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_Customer_Remarks",
+      "v": "-",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Skypass_Membership",
+      "v": "true",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Set membership info"
+    },
+    {
+      "k": "IVR_Flow_Test",
+      "v": "03_SELRS-IVR",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "Language_Code",
+      "v": "ko-KR",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "Membership_Level",
+      "v": "MP",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Set membership info"
+    },
+    {
+      "k": "ThresholdSecond",
+      "v": "49",
+      "c": "MOD_EWT",
+      "i": "Set_AttributeThreshold"
+    },
+    {
+      "k": "Imminent_Flight_Customer_Active_Flag",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Abnormal_Flight_Operation_Customer_Judge_Hours",
+      "v": "",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Agent_WrapUp_Disposition_Code_Sub",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Abandon_Call_History_Minutes",
+      "v": "0",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Matched_Profile_Id",
+      "v": "6d5a1988576d4a54b4177e91ff96e419",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Matched_Profile_Id and Search_Profile_1"
+    },
+    {
+      "k": "Transferring_Agent_User_Name",
+      "v": "GQKB003060@kalmate.net",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "Pre_Queue_Message_Flag_1",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "ContactFlow",
+      "v": "Entry>MOD_Journey_Configuration>MOD_Language>Main>SELRS-IVR>MOD_DNISAnnouncement>MOD_Language>MOD_EmergencyAnnouncement>PreQueue>MOD_Profile_ID&V>MOD_GetRoutingPriority>MOD_Skypass>Mod_EWT>MOD_SetRoutingPriority>MOD_SpecialHandling>CustomerQueue",
+      "c": "01_Entry",
+      "i": "Attribute_contactFlow"
+    },
+    {
+      "k": "Pre_Queue_Message_Flag_2",
+      "v": "",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Pre_Queue_Message_Flag_3",
+      "v": "",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_WrapUp_TKT_Sub",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_Ai_Summary_Detail_1",
+      "v": "고객은 3월 26일 제주-김포 편도 여행을 예약했으며, 부인과 함께 탑승할 예정임.",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Skypass_Number_Authenticated",
+      "v": "false",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Authenticated_DOB_and_Name"
+    },
+    {
+      "k": "CallBack_SMS_Active_Flag",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_Ai_Summary_Detail_3",
+      "v": "상담사는 고객의 요청대로 부인의 좌석을 고객의 옆자리로 변경 조치함.",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_Ai_Summary_Detail_2",
+      "v": "고객의 좌석과 부인의 좌석이 달라 옆자리 배정을 요청함.",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_Authenticated_Skypass",
+      "v": "Unchecked",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Callback_SMS_Language_Code",
+      "v": "",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "High_Revenue_Customer_Grades",
+      "v": "[]",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "AgentCompany",
+      "v": "SELBPO",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "EWT_Thres_Hold1",
+      "v": "30",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "IVR_Flow_Test_Percent",
+      "v": "0%",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "EWT_Thres_Hold2",
+      "v": "99999",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "BCP_Flag",
+      "v": "",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "CallBack_Active_Flag",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "TimeZone_Value",
+      "v": "Asia/Seoul",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Lunch_Hours",
+      "v": "false",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Skypass_Tier",
+      "v": "MP",
+      "c": "MOD_Skypass",
+      "i": "Set high value and membership from IDnV"
+    },
+    {
+      "k": "Agent_Available_Count",
+      "v": "1",
+      "c": "05_CustomerQueue",
+      "i": "setContactAttribute"
+    },
+    {
+      "k": "Agent_Customer_Skypass",
+      "v": "112514813421",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "IDnV_Entered_Value",
+      "v": "480912",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Set IDnV_Entered_Value"
+    },
+    {
+      "k": "Routing_Priority_Adjustment",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Business_Hours",
+      "v": "true",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_Contact_PII_Consent",
+      "v": "Agreed",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Vars_OnOff",
+      "v": "on",
+      "c": "MOD_VisualARS_Init",
+      "i": "Vars Init - Set VARS usage response"
+    },
+    {
+      "k": "Agent_WrapUp_PNR_Main",
+      "v": "69PFQX",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Preferred_Customer_Active_Flag",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "High_Revenue_Customer_Active_Flag",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Customer_Number",
+      "v": "+821067001370",
+      "c": "01_Entry",
+      "i": "Attribute_contactChannel"
+    },
+    {
+      "k": "One_Id_Number",
+      "v": "S199212102082768",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Authenticated_DOB_and_Name"
+    },
+    {
+      "k": "Abnormal_Flight_Operation_Customer_Active_Flag",
+      "v": "false",
+      "c": "MOD_GetRoutingPriority",
+      "i": "Attribute_RoutingPriorityConfiguration"
+    },
+    {
+      "k": "Agent_Contact_Time_In_Queue",
+      "v": "00:00:01",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Language",
+      "v": "ko-KR",
+      "c": "MOD_Journey_Configuration",
+      "i": "SetContactAttribute"
+    },
+    {
+      "k": "EWT_Callback_Time",
+      "v": "0",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Agent_Authenticated_DOB",
+      "v": "Unchecked",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_Contact_Seleted_Language",
+      "v": "Korean",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_WrapUp_Note",
+      "v": "MP TCP ASR ",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "High_Value_Tag",
+      "v": "",
+      "c": "MOD_Skypass",
+      "i": "Set high value and membership from IDnV"
+    },
+    {
+      "k": "Agent_Contact_Country_Name",
+      "v": "KOREA, REPUBLIC OF",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_Customer_Associated_Profile_ID",
+      "v": "6d5a1988576d4a54b4177e91ff96e419",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Contact_Channel",
+      "v": "VOICE",
+      "c": "01_Entry",
+      "i": "Attribute_contactChannel"
+    },
+    {
+      "k": "EWT",
+      "v": "10",
+      "c": "MOD_EWT",
+      "i": "Set_Attribute1"
+    },
+    {
+      "k": "Name_Authenticated",
+      "v": "true",
+      "c": "MOD_Customer_Profile_IDnV",
+      "i": "Authenticated_DOB_and_Name"
+    },
+    {
+      "k": "Abandon_Call_Queue_Wait_Seconds",
+      "v": "0",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "Service_Number",
+      "v": "+82269269244",
+      "c": "01_Entry",
+      "i": "Attribute_contactChannel"
+    },
+    {
+      "k": "Agent_Authenticated_Name",
+      "v": "Unchecked",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "AgentTeam",
+      "v": "DOM-HS-ITX",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "Agent_Ai_Summary_Title",
+      "v": "부부 동행 여정의 좌석 배정 문의",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_WrapUp_Caller_Info",
+      "v": "",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "Agent_WrapUp_Disposition_Code_Main",
+      "v": "사전좌석배정",
+      "c": "",
+      "i": ""
+    },
+    {
+      "k": "FromCenter",
+      "v": "SELRS",
+      "c": "03_SELRS-IVR",
+      "i": "Attribute_contactFlow"
+    },
+    {
+      "k": "PIC_Business_Hours",
+      "v": "false",
+      "c": "MOD_PICActivateCheck",
+      "i": "Attribut_PIC-Setting"
+    },
+    {
+      "k": "Connected_Agent_User_Name",
+      "v": "GQKB003060@kalmate.net",
+      "c": "06_AgentWhisper",
+      "i": "Set Agent Info Attributes"
+    },
+    {
+      "k": "Call_Recording_Flag",
+      "v": "true",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    },
+    {
+      "k": "PIC_Enable_Y_N",
+      "v": "false",
+      "c": "MOD_PICActivateCheck",
+      "i": "Attribut_PIC-Setting"
+    },
+    {
+      "k": "Scheduled_Callback_Queue_ARN",
+      "v": "",
+      "c": "04_Prequeue",
+      "i": "Attribute_Queue1"
+    }
+  ]
+}
