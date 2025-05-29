@@ -1229,14 +1229,14 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
             if is_exists == False:
                 data.append({
                     "k": k,
-                    "v": v,
+                    "v": json.dumps(v,ensure_ascii=False),
                     "c": "",
                     "i": ""
                 })
             else:
                 data.append({
                     "k": k,
-                    "v": v,
+                    "v": json.dumps(v,ensure_ascii=False),
                     "c": log.get("ContactFlowName"),
                     "i": log.get("Identifier")
                 })
