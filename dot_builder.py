@@ -178,7 +178,8 @@ def get_node_text_by_module_type(module_type,log,block_id):
                     node_text += line + "\n"
         elif param_json.get("PromptSource"):
             prompt_wav = param_json.get("PromptLocation")
-            node_text += f"음원재생 : \n {prompt_wav.split("/")[-2]+"/"+prompt_wav.split("/")[-1]}"
+            if len(prompt_wav.split("/")) > 2:
+                node_text += f"음원재생 : \n {prompt_wav.split("/")[-2]+"/"+prompt_wav.split("/")[-1]}"
         
 
         if replaced_arn_log.get('Results'):
