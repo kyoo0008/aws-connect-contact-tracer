@@ -29,7 +29,7 @@ ENV = sys.argv[8]
 FILE_PREFIX = f"{ENV}-main_flow_"
 
 # Save Graph
-def save_graph(dot, output_file=f"{FILE_PREFIX}{SELECTED_CONTACT_ID}"):
+def save_graph(dot, associated_contacts, output_file=f"{FILE_PREFIX}{SELECTED_CONTACT_ID}"):
     """
     Graphviz 그래프를 파일로 저장하고 DOT UI를 실행합니다.
     """
@@ -38,22 +38,23 @@ def save_graph(dot, output_file=f"{FILE_PREFIX}{SELECTED_CONTACT_ID}"):
     dot.render(file_path, format=fmt, cleanup=True)
     print(f"Contact 시각화가 {file_path}.{fmt} (으)로 저장되었습니다.")
 
-    window = MainDotWindow(f"{file_path}.{fmt}")
+    window = MainDotWindow(f"{file_path}.{fmt}", associated_contacts)
     window.connect('delete-event', Gtk.main_quit)
     Gtk.main()
 
-def set_history_window(contact_id):
+def set_history_window(contact_id, associated_contacts):
     fmt = "dot"
     output_file = f"{FILE_PREFIX}{contact_id}"
     file_path = f"./virtual_env/{output_file}"
-    window = MainDotWindow(f"{file_path}.{fmt}")
+    window = MainDotWindow(f"{file_path}.{fmt}", associated_contacts)
     window.connect('delete-event', Gtk.main_quit)
     Gtk.main()
 
 if __name__ == "__main__":
 
     if SEARCH_OPTION == "History":
-        set_history_window(SELECTED_CONTACT_ID)
+        set_history_window(SELECTED_CONTACT_ID,ASSOCIATED_CONTACTS)
     else:
         dot = build_main_contacts(SELECTED_CONTACT_ID,ASSOCIATED_CONTACTS,INITIATION_TIMESTAMP,REGION,LOG_GROUP,ENV,INSTANCE_ID)
-        save_graph(dot)
+
+        save_graph(dot,ASSOCIATED_CONTACTS)

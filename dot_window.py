@@ -6,11 +6,17 @@ import ast
 class DotWindowBase(xdot.ui.DotWindow):
     """공통 DotWindow 로직을 포함한 기본 클래스"""
     
-    def __init__(self, dot_file):
+    def __init__(self, dot_file, associated_contacts):
+
         super().__init__()
         self.dot_file = dot_file
+        self.associated_contacts = associated_contacts
+        
+
         self.dotwidget.connect('clicked', self.on_node_clicked)
         self.open_file(self.dot_file)
+        self.set_contact_ids(self.associated_contacts)
+
 
     def on_delete_event(self, widget, event):
         print("창이 닫혔습니다.")
@@ -48,6 +54,9 @@ class TextViewDialog(Gtk.Window):
 class MainDotWindow(DotWindowBase):
     """메인 Contact Flow 그래프를 표시하는 창"""
 
+    def __init__(self, dot_file, associated_contacts):
+        super().__init__(dot_file, associated_contacts)
+        
     def on_node_clicked(self, widget, sub_file, event):
         
         if ("flow" in sub_file and ".dot" in sub_file) or "transcript" in sub_file or "lex" in sub_file:

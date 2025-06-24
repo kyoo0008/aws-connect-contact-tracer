@@ -584,6 +584,7 @@ class DotWindow(Gtk.Window):
             <toolitem action="ZoomFit"/>
             <toolitem action="Zoom100"/>
             <separator/>
+            <toolitem name="FindDeep" action="FindDeep"/>
             <toolitem name="Find" action="Find"/>
             <separator name="FindNextSeparator"/>
             <toolitem action="FindNext"/>
@@ -623,6 +624,8 @@ class DotWindow(Gtk.Window):
         actiongroup = Gtk.ActionGroup('Actions')
         self.actiongroup = actiongroup
 
+        
+
         # Create actions
         actiongroup.add_actions((
             ('Open', Gtk.STOCK_OPEN, None, None, "Open dot-file", self.on_open),
@@ -634,6 +637,7 @@ class DotWindow(Gtk.Window):
             ('ZoomOut', Gtk.STOCK_ZOOM_OUT, None, None, "Zoom out", self.dotwidget.on_zoom_out),
             ('ZoomFit', Gtk.STOCK_ZOOM_FIT, None, None, "Fit zoom", self.dotwidget.on_zoom_fit),
             ('Zoom100', Gtk.STOCK_ZOOM_100, None, None, "Reset zoom level", self.dotwidget.on_zoom_100),
+            ('FindDeep', Gtk.STOCK_FIND_AND_REPLACE, 'Find Deeply', None, 'Find text deeply in all subflows', self.on_finddeep_search),
             ('FindNext', Gtk.STOCK_GO_FORWARD, 'Next Result', None, 'Move to the next search result', self.on_find_next),
         ))
 
@@ -654,6 +658,13 @@ class DotWindow(Gtk.Window):
         findstatus_action = FindMenuToolAction("FindStatus", None,
                                                "Number of results found", None)
         actiongroup.add_action(findstatus_action)
+
+        # finddeep_action
+        self.finddeep_action = Gtk.Action('FindDeepSearch', 'Deep Search', 'Open File Search', None)
+        # self.finddeep_action.connect("activate", self.on_finddeep_search)
+        actiongroup.add_action(self.finddeep_action)
+
+        
 
         # Add the actiongroup to the uimanager
         uimanager.insert_action_group(actiongroup, 0)
@@ -876,3 +887,191 @@ class DotWindow(Gtk.Window):
     def on_history(self, action, has_back, has_forward):
         self.back_action.set_sensitive(has_back)
         self.forward_action.set_sensitive(has_forward)
+
+    def on_finddeep_search(self, action):
+
+        
+        dialog = SearchDialog(self)
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            search_text = dialog.entry.get_text()
+            # self.search_files(search_text)
+            search_window = TextViewWindow(search_text, self.associated_contact_ids)
+            search_window.show_all()
+        dialog.destroy()
+
+    def set_contact_ids(self, associated_contacts):
+        self.associated_contact_ids = [contact['ContactId'] for contact in associated_contacts['ContactSummaryList']]
+
+
+
+class SearchDialog(Gtk.Dialog):
+    def __init__(self, parent):
+        super().__init__(title="Search", transient_for=parent, modal=True)
+        self.add_buttons(
+            Gtk.STOCK_FIND,
+            Gtk.ResponseType.OK,
+            Gtk.STOCK_CANCEL,
+            Gtk.ResponseType.CANCEL,
+        )
+
+        box = self.get_content_area()
+
+        label = Gtk.Label(label="Insert text you want to search for:")
+        box.add(label)
+
+        self.entry = Gtk.Entry()
+        box.add(self.entry)
+
+        self.show_all()
+
+
+# class TextViewWindow(Gtk.Window):
+#     def __init__(self, widget):
+#         Gtk.Window.__init__(self, title="File Search Example")
+
+#         self.set_default_size(-1, 350)
+
+#         self.grid = Gtk.Grid()
+#         self.add(self.grid)
+
+#         self.create_textview()
+#         # self.create_toolbar()
+#         print(widget)
+#         self.search_files(widget)
+
+
+#     def create_toolbar(self):
+#         toolbar = Gtk.Toolbar()
+#         self.grid.attach(toolbar, 0, 0, 3, 1)
+
+#         button_search = Gtk.ToolButton()
+#         button_search.set_icon_name("system-search-symbolic")
+#         button_search.connect("clicked", self.on_search_clicked)
+#         toolbar.insert(button_search, 0)
+
+#     def create_textview(self):
+#         scrolledwindow = Gtk.ScrolledWindow()
+#         scrolledwindow.set_hexpand(True)
+#         scrolledwindow.set_vexpand(True)
+#         self.grid.attach(scrolledwindow, 0, 1, 3, 1)
+
+#         self.textview = Gtk.TextView()
+#         self.textbuffer = self.textview.get_buffer()
+#         self.textbuffer.set_text("Search results will appear here.")
+#         scrolledwindow.add(self.textview)
+
+#     def on_search_clicked(self, widget):
+#         dialog = SearchDialog(self)
+#         response = dialog.run()
+#         if response == Gtk.ResponseType.OK:
+#             search_text = dialog.entry.get_text()
+#             self.search_files(search_text)
+#         dialog.destroy()
+
+#     def search_files(self, keyword):
+#         directory = "./virtual_env/"
+#         result_files = []
+
+#         # 디렉토리 내 파일 검색
+#         for filename in os.listdir(directory):
+#             if filename == ".DS_Store":
+#                 continue 
+#             file_path = os.path.join(directory, filename)
+
+#             if os.path.isfile(file_path):
+#                 try:
+#                     with open(file_path, "r", encoding="utf-8") as f:
+#                         content = f.read()
+#                         if keyword in content:
+#                             result_files.append(filename)
+#                 except Exception as e:
+#                     print(f"Error reading {filename}: {e}")
+
+#         # 결과 출력
+#         if result_files:
+#             result_text = "🔍 Search Results:\n\n" + "\n".join(result_files)
+#         else:
+#             result_text = "❌ No files contain the keyword."
+
+#         self.textbuffer.set_text(result_text)
+
+class TextViewWindow(Gtk.Window):
+    def __init__(self, search_text, associated_contact_ids):
+        Gtk.Window.__init__(self, title="File Search Example")
+        print(associated_contact_ids)
+
+        self.set_default_size(-1, 350)
+
+        self.grid = Gtk.Grid()
+        self.add(self.grid)
+
+        self.create_textview()
+
+        self.search_files(search_text, associated_contact_ids)
+
+    def create_textview(self):
+        scrolledwindow = Gtk.ScrolledWindow()
+        scrolledwindow.set_hexpand(True)
+        scrolledwindow.set_vexpand(True)
+        self.grid.attach(scrolledwindow, 0, 1, 3, 1)
+
+        self.textview = Gtk.TextView()
+        self.textbuffer = self.textview.get_buffer()
+        self.textbuffer.set_text("Search results will appear here.")
+        scrolledwindow.add(self.textview)
+
+        # ✅ 파일 클릭 시 이벤트 처리용 ListBox 추가
+        self.listbox = Gtk.ListBox()
+        self.grid.attach(self.listbox, 0, 2, 3, 1)
+
+    def search_files(self, keyword, associated_contact_ids):
+        directory = "./virtual_env/"
+        result_files = []
+
+        for filename in os.listdir(directory):
+            if filename == ".DS_Store":
+                continue
+            file_path = os.path.join(directory, filename)
+
+            if os.path.isfile(file_path):
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        if keyword in content and filename.endswith(".dot"):
+                            for associated_contact_id in associated_contact_ids:
+                                if associated_contact_id in content:
+                                    result_files.append({associated_contact_id:filename})
+                except Exception as e:
+                    print(f"Error reading {filename}: {e}")
+
+        if result_files:
+            result_text = f"🔍 Search Results: {len(result_files)} founds\n\n"
+            #     for file_dict in result_files:
+            #         for contact_id, filename in file_dict.items():
+            #             result_text += f"{contact_id} → {filename}\n"
+
+            self.populate_listbox(result_files, keyword)
+        else:
+            result_text = "❌ No files contain the keyword."
+
+        self.textbuffer.set_text(result_text)
+
+    def populate_listbox(self, file_list, keyword):
+        for file_dict in file_list:
+            for contact_id, filename in file_dict.items():
+                row = Gtk.ListBoxRow()
+                button = Gtk.Button(label=f"{contact_id} → {filename}")
+                button.connect("clicked", self.on_file_selected, contact_id, filename, keyword)
+                row.add(button)
+                self.listbox.add(row)
+
+
+        self.listbox.show_all()
+
+    def on_file_selected(self, button, contact_id, filename, keyword):
+        print(f"✅ 선택된 contact_id: {contact_id} / 선택된 파일명: {filename} / 검색 keyword : {keyword}")
+        # self.contact_id_callback(contact_id) # To-do : dot 띄우고 node highlight
+        self.destroy()
+
+
