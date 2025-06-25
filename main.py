@@ -7,7 +7,7 @@ from graphviz import Digraph
 import pytz
 import re
 from collections import defaultdict
-from dot_window import MainDotWindow
+from xdot.ui.window import MainDotWindow
 from dot_builder import build_main_contacts
 # gtk
 import gi

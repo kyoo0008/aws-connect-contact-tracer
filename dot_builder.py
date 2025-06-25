@@ -28,6 +28,7 @@ from describe_flow import get_comparison_value, \
 from fetch_data_from_s3 import get_analysis_object
 import traceback
 
+# To-do : 전체적인 node_id 정리, dot 파일 지정 형식도 정리 
 
 # Error 로 인식하는 Results Keyword
 ERROR_KEYWORDS = [
@@ -758,7 +759,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
 
     # 서브 그래프 생성
     if flow_type == "module":
-        sub_dot, _, module_error_count = build_module_detail(l_logs, l_name,lambda_logs,module_error_count)
+        sub_dot, _, module_error_count = build_module_detail(l_logs, l_name,lambda_logs,module_error_count) # To-do : node_id 정의 다시 하기 
         node_title = "InvokeFlowModule"
         error_count += module_error_count
 

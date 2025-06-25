@@ -32,7 +32,8 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 
 from . import elements
-
+import ast
+import json
 # See http://www.graphviz.org/pub/scm/graphviz-cairo/plugin/cairo/gvrender_cairo.c
 
 # For pygtk inspiration and guidance see:
@@ -896,7 +897,7 @@ class DotWindow(Gtk.Window):
         if response == Gtk.ResponseType.OK:
             search_text = dialog.entry.get_text()
             # self.search_files(search_text)
-            search_window = TextViewWindow(search_text, self.associated_contact_ids)
+            search_window = TextViewWindow(search_text, self.associated_contacts)
             search_window.show_all()
         dialog.destroy()
 
@@ -926,81 +927,12 @@ class SearchDialog(Gtk.Dialog):
         self.show_all()
 
 
-# class TextViewWindow(Gtk.Window):
-#     def __init__(self, widget):
-#         Gtk.Window.__init__(self, title="File Search Example")
-
-#         self.set_default_size(-1, 350)
-
-#         self.grid = Gtk.Grid()
-#         self.add(self.grid)
-
-#         self.create_textview()
-#         # self.create_toolbar()
-#         print(widget)
-#         self.search_files(widget)
-
-
-#     def create_toolbar(self):
-#         toolbar = Gtk.Toolbar()
-#         self.grid.attach(toolbar, 0, 0, 3, 1)
-
-#         button_search = Gtk.ToolButton()
-#         button_search.set_icon_name("system-search-symbolic")
-#         button_search.connect("clicked", self.on_search_clicked)
-#         toolbar.insert(button_search, 0)
-
-#     def create_textview(self):
-#         scrolledwindow = Gtk.ScrolledWindow()
-#         scrolledwindow.set_hexpand(True)
-#         scrolledwindow.set_vexpand(True)
-#         self.grid.attach(scrolledwindow, 0, 1, 3, 1)
-
-#         self.textview = Gtk.TextView()
-#         self.textbuffer = self.textview.get_buffer()
-#         self.textbuffer.set_text("Search results will appear here.")
-#         scrolledwindow.add(self.textview)
-
-#     def on_search_clicked(self, widget):
-#         dialog = SearchDialog(self)
-#         response = dialog.run()
-#         if response == Gtk.ResponseType.OK:
-#             search_text = dialog.entry.get_text()
-#             self.search_files(search_text)
-#         dialog.destroy()
-
-#     def search_files(self, keyword):
-#         directory = "./virtual_env/"
-#         result_files = []
-
-#         # 디렉토리 내 파일 검색
-#         for filename in os.listdir(directory):
-#             if filename == ".DS_Store":
-#                 continue 
-#             file_path = os.path.join(directory, filename)
-
-#             if os.path.isfile(file_path):
-#                 try:
-#                     with open(file_path, "r", encoding="utf-8") as f:
-#                         content = f.read()
-#                         if keyword in content:
-#                             result_files.append(filename)
-#                 except Exception as e:
-#                     print(f"Error reading {filename}: {e}")
-
-#         # 결과 출력
-#         if result_files:
-#             result_text = "🔍 Search Results:\n\n" + "\n".join(result_files)
-#         else:
-#             result_text = "❌ No files contain the keyword."
-
-#         self.textbuffer.set_text(result_text)
 
 class TextViewWindow(Gtk.Window):
-    def __init__(self, search_text, associated_contact_ids):
+    def __init__(self, search_text, associated_contacts):
         Gtk.Window.__init__(self, title="File Search Example")
-        print(associated_contact_ids)
 
+        self.associated_contacts = associated_contacts
         self.set_default_size(-1, 350)
 
         self.grid = Gtk.Grid()
@@ -1008,7 +940,7 @@ class TextViewWindow(Gtk.Window):
 
         self.create_textview()
 
-        self.search_files(search_text, associated_contact_ids)
+        self.search_files(search_text, associated_contacts)
 
     def create_textview(self):
         scrolledwindow = Gtk.ScrolledWindow()
@@ -1025,10 +957,10 @@ class TextViewWindow(Gtk.Window):
         self.listbox = Gtk.ListBox()
         self.grid.attach(self.listbox, 0, 2, 3, 1)
 
-    def search_files(self, keyword, associated_contact_ids):
+    def search_files(self, keyword, associated_contacts):
         directory = "./virtual_env/"
         result_files = []
-
+        associated_contact_ids = [contact['ContactId'] for contact in associated_contacts['ContactSummaryList']]
         for filename in os.listdir(directory):
             if filename == ".DS_Store":
                 continue
@@ -1072,6 +1004,212 @@ class TextViewWindow(Gtk.Window):
     def on_file_selected(self, button, contact_id, filename, keyword):
         print(f"✅ 선택된 contact_id: {contact_id} / 선택된 파일명: {filename} / 검색 keyword : {keyword}")
         # self.contact_id_callback(contact_id) # To-do : dot 띄우고 node highlight
-        self.destroy()
+        # dot_window = KeywordDotWindow(filename, keyword)
+        if "-main_flow_" in filename:
+            MainDotWindow(f'./virtual_env/{filename}', self.associated_contacts)
+        else:
+            SubDotWindow(f'./virtual_env/{filename}', self.associated_contacts)
+
+        # self.destroy()
 
 
+
+
+
+class DotWindowBase(DotWindow):
+    """공통 DotWindow 로직을 포함한 기본 클래스"""
+    
+    def __init__(self, dot_file, associated_contacts):
+
+        super().__init__()
+        self.dot_file = dot_file
+        self.associated_contacts = associated_contacts
+        
+
+        self.dotwidget.connect('clicked', self.on_node_clicked)
+        self.open_file(self.dot_file)
+        # self.set_contact_ids(self.associated_contacts)
+
+
+    def on_delete_event(self, widget, event):
+        print("창이 닫혔습니다.")
+        self.hide()
+        return True
+
+
+
+
+class MainDotWindow(DotWindowBase):
+    """메인 Contact Flow 그래프를 표시하는 창"""
+
+    def __init__(self, dot_file, associated_contacts):
+        super().__init__(dot_file, associated_contacts)
+        self.associated_contacts = associated_contacts
+
+        
+    def on_node_clicked(self, widget, sub_file, event):
+        
+        if ("flow" in sub_file and ".dot" in sub_file) or "transcript" in sub_file or "lex" in sub_file:
+            print(f"서브 플로우 열기: {sub_file}")
+            SubDotWindow(sub_file, self.associated_contacts)
+        else:
+            if isinstance(sub_file, dict):
+                json_text = json.dumps(sub_file, indent=4, ensure_ascii=False) 
+                print(f"노드 클릭됨: \n{json_text}")
+                TextViewDialog("노드 정보", json_text)
+            else: # contact attributes
+                json_text = ast.literal_eval(sub_file)
+                # print(f"노드 클릭됨: \n{json_text}")
+                AttributeTable(json_text)
+
+
+
+class SubDotWindow(DotWindowBase):
+    """서브 Contact Flow 그래프를 표시하는 창"""
+    def __init__(self, dot_file, associated_contacts):
+        super().__init__(dot_file, associated_contacts)
+        self.associated_contacts = associated_contacts
+
+    def on_node_clicked(self, widget, json_data, event):
+        try:
+            json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
+            if json_text.startswith('./virtual_env/module_'):
+                print(f"서브 플로우 열기: {json_data}")
+                SubDotModuleWindow(json_data, self.associated_contacts)
+            elif json_text.startswith('./virtual_env/xray'):
+                print(f"서브 플로우 열기: {json_data}")
+                SubDotXrayWindow(json_data, self.associated_contacts)
+            elif json_text.startswith('./virtual_env/transcript') or json_text.startswith('./virtual_env/lex'):
+                print(f"서브 플로우 열기: {json_data}")
+                SubDotTranscriptWindow(json_data, self.associated_contacts)
+            else:
+                print(f"노드 클릭됨: \n{json_text}")
+                TextViewDialog("노드 정보", json_text)
+        except Exception as e:
+            print(f"SubDotWindow 표시 오류: {e}")
+
+
+class SubDotModuleWindow(DotWindowBase):
+    """모듈 서브 Contact Flow 그래프를 표시하는 창"""
+    def __init__(self, dot_file, associated_contacts):
+        super().__init__(dot_file, associated_contacts)
+        self.associated_contacts = associated_contacts
+
+    def on_node_clicked(self, widget, json_data, event):
+        try:
+            json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
+            if json_text.startswith('./virtual_env/xray'):
+                print(f"서브 플로우 열기: {json_data}")
+                SubDotXrayWindow(json_data,self.associated_contacts)
+            else:
+                print(f"노드 클릭됨: \n{json_text}")
+                TextViewDialog("노드 정보", json_text)
+        except Exception as e:
+            print(f"SubDotModuleWindow 표시 오류: {e}")
+
+
+class SubDotXrayWindow(DotWindowBase):
+    """X-Ray 서브 Contact Flow 그래프를 표시하는 창"""
+    def __init__(self, dot_file, associated_contacts):
+        super().__init__(dot_file, associated_contacts)
+        self.associated_contacts = associated_contacts
+
+    def on_node_clicked(self, widget, json_data, event):
+        try:
+            json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
+            print(f"노드 클릭됨: \n{json_text}")    
+            TextViewDialog("노드 정보", json_text)
+        except Exception as e:
+            print(f"SubDotXrayWindow 표시 오류: {e}")
+
+
+class SubDotTranscriptWindow(DotWindowBase):
+    """Contact Transcript를 표시하는 창"""
+    def __init__(self, dot_file, associated_contacts):
+        super().__init__(dot_file, associated_contacts)
+        self.associated_contacts = associated_contacts
+
+    def on_node_clicked(self, widget, json_data, event):
+        try:
+            json_text = json.dumps(json_data, indent=4, ensure_ascii=False) if isinstance(json_data, dict) else json_data
+            print(f"노드 클릭됨: \n{json_text}")    
+            TextViewDialog("노드 정보", json_text)
+        except Exception as e:
+            print(f"SubDotXrayWindow 표시 오류: {e}")
+
+
+class AttributeTable(Gtk.Window):
+    def __init__(self, data):
+        Gtk.Window.__init__(self, title="Contact Attributes")
+        self.set_default_size(1200, 900)
+        self.set_border_width(10)
+
+
+        # Create a ListStore with 4 string columns
+        self.store = Gtk.ListStore(str, str, str, str)
+        for item in data:
+            self.store.append([
+                item["k"],
+                item["v"],
+                item["c"],
+                item["i"]
+            ])
+
+        
+        sorted_model = Gtk.TreeModelSort(model=self.store)
+        sorted_model.set_sort_column_id(0, Gtk.SortType.ASCENDING)
+
+        # Create the TreeView using the store
+
+        treeview = Gtk.TreeView(model=sorted_model)
+        columns = ["Key", "Value", "Contact Flow", "Identifier"]
+        for i, column_title in enumerate(columns):
+            renderer = Gtk.CellRendererText()
+            # renderer.set_property("wrap-mode", Gtk.WrapMode.WORD_CHAR)
+            renderer.set_property("wrap-width", 400 if column_title == "Value" else 200)
+            
+            column = Gtk.TreeViewColumn(column_title, renderer, text=i)
+            column.set_resizable(True)
+            column.set_min_width(400 if column_title == "Value" else 150)
+            treeview.append_column(column)
+
+        # 스크롤 가능하게 감싸고 테두리도 추가
+        frame = Gtk.Frame()
+        frame.set_shadow_type(Gtk.ShadowType.IN)
+        frame.set_label("📋 Contact Attribute Details")
+        frame.set_label_align(0.5, 0.5)
+
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled_window.add(treeview)
+
+        frame.add(scrolled_window)
+        self.add(frame)
+        self.show_all()
+
+
+class TextViewDialog(Gtk.Window):
+    """스크롤 가능한 텍스트 뷰어 창"""
+
+    def __init__(self, title, text):
+        super().__init__(title=title)
+        self.set_default_size(700, 800)
+        self.set_position(Gtk.WindowPosition.CENTER)
+
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        vbox.set_border_width(10)
+
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        
+        text_view = Gtk.TextView()
+        text_view.set_editable(False)
+        text_view.set_wrap_mode(Gtk.WrapMode.WORD)
+        text_buffer = text_view.get_buffer()
+        text_buffer.set_text(text)
+
+        scrolled_window.add(text_view)
+        vbox.pack_start(scrolled_window, True, True, 0)
+
+        self.add(vbox)
+        self.show_all()
