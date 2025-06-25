@@ -713,8 +713,22 @@ class DotWindow(Gtk.Window):
             sys.stderr.write('warning: re.compile() failed with error "%s"\n' % err)
             return []
         for element in dot_widget.graph.nodes + dot_widget.graph.edges + dot_widget.graph.shapes:
-            if element.search_text(regexp):
+            # if element.search_text(regexp):
+            #     found_items.append(element)
+            matched = element.search_text(regexp)
+
+            if hasattr(element, 'url') and element.url:
+                try:
+                    url_text = json.dumps(ast.literal_eval(element.url), ensure_ascii=False)
+                except Exception:
+                    url_text = str(element.url)
+
+                if regexp.search(url_text):
+                    matched = True
+
+            if matched:
                 found_items.append(element)
+            
         return sorted(found_items, key=operator.methodcaller('get_text'))
 
     def textentry_changed(self, widget, entry):
@@ -970,7 +984,7 @@ class TextViewWindow(Gtk.Window):
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
                         content = f.read()
-                        if keyword in content and filename.endswith(".dot"):
+                        if keyword in content and filename.endswith(".dot") and "xray" not in filename and "main_flow" not in filename:
                             for associated_contact_id in associated_contact_ids:
                                 if associated_contact_id in content:
                                     result_files.append({associated_contact_id:filename})
@@ -993,7 +1007,14 @@ class TextViewWindow(Gtk.Window):
         for file_dict in file_list:
             for contact_id, filename in file_dict.items():
                 row = Gtk.ListBoxRow()
-                button = Gtk.Button(label=f"{contact_id} → {filename}")
+                display_name = ""
+                print(filename)
+                if len(filename.split("__")) > 0:
+                    if filename.startswith("module"):
+                        display_name = filename.split("__")[1] + " >> " + filename.split("__")[2]
+                    else:
+                        display_name = filename.split("__")[1]
+                button = Gtk.Button(label=f"🆔  :  {contact_id} → {display_name.replace(".dot","")}")
                 button.connect("clicked", self.on_file_selected, contact_id, filename, keyword)
                 row.add(button)
                 self.listbox.add(row)
@@ -1002,13 +1023,13 @@ class TextViewWindow(Gtk.Window):
         self.listbox.show_all()
 
     def on_file_selected(self, button, contact_id, filename, keyword):
-        print(f"✅ 선택된 contact_id: {contact_id} / 선택된 파일명: {filename} / 검색 keyword : {keyword}")
+        # print(f"✅ 선택된 contact_id: {contact_id} / 선택된 파일명: {filename} / 검색 keyword : {keyword}")
         # self.contact_id_callback(contact_id) # To-do : dot 띄우고 node highlight
         # dot_window = KeywordDotWindow(filename, keyword)
         if "-main_flow_" in filename:
-            MainDotWindow(f'./virtual_env/{filename}', self.associated_contacts)
+            MainDotWindow(f'./virtual_env/{filename}', self.associated_contacts, keyword)
         else:
-            SubDotWindow(f'./virtual_env/{filename}', self.associated_contacts)
+            SubDotWindow(f'./virtual_env/{filename}', self.associated_contacts, keyword)
 
         # self.destroy()
 
@@ -1019,16 +1040,20 @@ class TextViewWindow(Gtk.Window):
 class DotWindowBase(DotWindow):
     """공통 DotWindow 로직을 포함한 기본 클래스"""
     
-    def __init__(self, dot_file, associated_contacts):
+    def __init__(self, dot_file, associated_contacts, keyword=None):
 
         super().__init__()
         self.dot_file = dot_file
         self.associated_contacts = associated_contacts
+        self.default_keyword = keyword
         
 
         self.dotwidget.connect('clicked', self.on_node_clicked)
         self.open_file(self.dot_file)
         # self.set_contact_ids(self.associated_contacts)
+        if self.default_keyword:
+            self.textentry.set_text(self.default_keyword)
+            self.find_text(self.default_keyword)
 
 
     def on_delete_event(self, widget, event):
@@ -1042,9 +1067,10 @@ class DotWindowBase(DotWindow):
 class MainDotWindow(DotWindowBase):
     """메인 Contact Flow 그래프를 표시하는 창"""
 
-    def __init__(self, dot_file, associated_contacts):
-        super().__init__(dot_file, associated_contacts)
+    def __init__(self, dot_file, associated_contacts, keyword=None):
+        super().__init__(dot_file, associated_contacts, keyword)
         self.associated_contacts = associated_contacts
+        self.default_keyword = keyword
 
         
     def on_node_clicked(self, widget, sub_file, event):
@@ -1066,9 +1092,10 @@ class MainDotWindow(DotWindowBase):
 
 class SubDotWindow(DotWindowBase):
     """서브 Contact Flow 그래프를 표시하는 창"""
-    def __init__(self, dot_file, associated_contacts):
-        super().__init__(dot_file, associated_contacts)
+    def __init__(self, dot_file, associated_contacts, keyword=None):
+        super().__init__(dot_file, associated_contacts, keyword)
         self.associated_contacts = associated_contacts
+        self.default_keyword = keyword
 
     def on_node_clicked(self, widget, json_data, event):
         try:
@@ -1091,9 +1118,10 @@ class SubDotWindow(DotWindowBase):
 
 class SubDotModuleWindow(DotWindowBase):
     """모듈 서브 Contact Flow 그래프를 표시하는 창"""
-    def __init__(self, dot_file, associated_contacts):
-        super().__init__(dot_file, associated_contacts)
+    def __init__(self, dot_file, associated_contacts, keyword=None):
+        super().__init__(dot_file, associated_contacts, keyword)
         self.associated_contacts = associated_contacts
+        self.default_keyword = keyword
 
     def on_node_clicked(self, widget, json_data, event):
         try:
@@ -1110,9 +1138,10 @@ class SubDotModuleWindow(DotWindowBase):
 
 class SubDotXrayWindow(DotWindowBase):
     """X-Ray 서브 Contact Flow 그래프를 표시하는 창"""
-    def __init__(self, dot_file, associated_contacts):
-        super().__init__(dot_file, associated_contacts)
+    def __init__(self, dot_file, associated_contacts, keyword=None):
+        super().__init__(dot_file, associated_contacts, keyword)
         self.associated_contacts = associated_contacts
+        self.default_keyword = keyword
 
     def on_node_clicked(self, widget, json_data, event):
         try:
@@ -1125,9 +1154,10 @@ class SubDotXrayWindow(DotWindowBase):
 
 class SubDotTranscriptWindow(DotWindowBase):
     """Contact Transcript를 표시하는 창"""
-    def __init__(self, dot_file, associated_contacts):
-        super().__init__(dot_file, associated_contacts)
+    def __init__(self, dot_file, associated_contacts, keyword=None):
+        super().__init__(dot_file, associated_contacts, keyword)
         self.associated_contacts = associated_contacts
+        self.default_keyword = keyword
 
     def on_node_clicked(self, widget, json_data, event):
         try:

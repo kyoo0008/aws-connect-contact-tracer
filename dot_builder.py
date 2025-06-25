@@ -740,6 +740,9 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     module_error_count = 0
 
     node_title = ""
+
+    sub_file = ""
+
     for log in l_logs:
         timestamp = datetime.fromisoformat(log['Timestamp'].replace('Z', '+00:00'))
 
@@ -763,14 +766,22 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
         node_title = "InvokeFlowModule"
         error_count += module_error_count
 
+        flow_name = ""
+        flow_logs = []
+        with open(f"./virtual_env/contact_flow_{contact_id}.json") as f:
+            flow_logs = json.loads(f.read())
+
+        flow_arn_list = [l for l in flow_logs if l.get("ContactFlowId") == log['ModuleExecutionStack'][1]]
+        if len(flow_arn_list) > 0:
+            flow_name = flow_arn_list[0].get("ContactFlowName")
+
+        sub_file = f"./virtual_env/{flow_type}_{contact_id}__{flow_name}__{l_name}"
 
     elif flow_type == "flow":
         sub_dot,error_count = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs,error_count)
         node_title = "TransferToFlow"
-
+        sub_file = f"./virtual_env/{flow_type}_{contact_id}__{l_name}"
     
-
-    sub_file = f"./virtual_env/{flow_type}_{contact_id}_{node_id}"
     sub_dot.render(sub_file, format="dot", cleanup=True)
 
     # ✅ MOD_ 모듈 노드의 label 구성 (build_main_flow와 동일한 형식)
@@ -826,7 +837,9 @@ def build_module_detail(logs, module_name,lambda_logs,module_error_count):
         is_error = any(keyword in log.get('Results', '') for keyword in ERROR_KEYWORDS) or is_lambda_error(log)
         if is_error:
             module_error_count += 1 
+
         node_id = f"{log['Timestamp'].replace(':', '').replace('.', '')}_{index}"
+
         module_type = log.get('ContactFlowModuleType')
         
         
@@ -1092,7 +1105,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_cou
         node_id = f"{log['Timestamp'].replace(':', '').replace('.', '')}_{index}"
 
         module_type = log.get('ContactFlowModuleType')
-        parameters = log.get('Parameters', {})
+
 
         # ✅ 중복 모듈 타입이면 기존 노드에 parameter를 추가
         # if log['ContactFlowName'].startswith("MOD_") or log['ContactFlowName'].startswith("99_MOD_"):
