@@ -368,6 +368,7 @@ class DotWidget(Gtk.DrawingArea):
         if event.keyval == Gdk.KEY_w:
             self.zoom_to_fit()
             return True
+            
         return False
 
     print_settings = None
@@ -915,9 +916,7 @@ class DotWindow(Gtk.Window):
             search_window.show_all()
         dialog.destroy()
 
-    def set_contact_ids(self, associated_contacts):
-        self.associated_contact_ids = [contact['ContactId'] for contact in associated_contacts['ContactSummaryList']]
-
+    
 
 
 class SearchDialog(Gtk.Dialog):
@@ -937,8 +936,16 @@ class SearchDialog(Gtk.Dialog):
 
         self.entry = Gtk.Entry()
         box.add(self.entry)
+        
+        self.connect('key-press-event', self.on_key_press_event)
 
         self.show_all()
+
+    def on_key_press_event(self, widget, event):
+        print(event.keyval)
+        if event.keyval == Gdk.KEY_Return or event.keyval == Gdk.KEY_KP_Enter:
+            self.response(Gtk.ResponseType.OK)
+
 
 
 
@@ -986,16 +993,13 @@ class TextViewWindow(Gtk.Window):
                         content = f.read()
                         if keyword in content and filename.endswith(".dot") and "xray" not in filename and "main_flow" not in filename:
                             for associated_contact_id in associated_contact_ids:
-                                if associated_contact_id in content:
+                                if associated_contact_id in content and associated_contact_id in filename:
                                     result_files.append({associated_contact_id:filename})
                 except Exception as e:
                     print(f"Error reading {filename}: {e}")
 
         if result_files:
             result_text = f"🔍 Search Results: {len(result_files)} founds\n\n"
-            #     for file_dict in result_files:
-            #         for contact_id, filename in file_dict.items():
-            #             result_text += f"{contact_id} → {filename}\n"
 
             self.populate_listbox(result_files, keyword)
         else:
@@ -1048,7 +1052,7 @@ class DotWindowBase(DotWindow):
 
         self.dotwidget.connect('clicked', self.on_node_clicked)
         self.open_file(self.dot_file)
-        # self.set_contact_ids(self.associated_contacts)
+
         if self.default_keyword:
             self.textentry.set_text(self.default_keyword)
             self.find_text(self.default_keyword)
