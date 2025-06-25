@@ -780,7 +780,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     elif flow_type == "flow":
         sub_dot,error_count = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs,error_count)
         node_title = "TransferToFlow"
-        sub_file = f"./virtual_env/{flow_type}_{contact_id}__{l_name}"
+        sub_file = f"./virtual_env/{flow_type}_{contact_id}_{node_id}__{l_name}"
     
     sub_dot.render(sub_file, format="dot", cleanup=True)
 

@@ -1008,7 +1008,7 @@ class TextViewWindow(Gtk.Window):
             for contact_id, filename in file_dict.items():
                 row = Gtk.ListBoxRow()
                 display_name = ""
-                print(filename)
+                
                 if len(filename.split("__")) > 0:
                     if filename.startswith("module"):
                         display_name = filename.split("__")[1] + " >> " + filename.split("__")[2]
@@ -1023,9 +1023,7 @@ class TextViewWindow(Gtk.Window):
         self.listbox.show_all()
 
     def on_file_selected(self, button, contact_id, filename, keyword):
-        # print(f"✅ 선택된 contact_id: {contact_id} / 선택된 파일명: {filename} / 검색 keyword : {keyword}")
-        # self.contact_id_callback(contact_id) # To-do : dot 띄우고 node highlight
-        # dot_window = KeywordDotWindow(filename, keyword)
+
         if "-main_flow_" in filename:
             MainDotWindow(f'./virtual_env/{filename}', self.associated_contacts, keyword)
         else:
