@@ -1013,7 +1013,7 @@ class TextViewWindow(Gtk.Window):
                 row = Gtk.ListBoxRow()
                 display_name = ""
                 
-                if len(filename.split("__")) > 0:
+                if len(filename.split("__")) > 1:
                     if filename.startswith("module"):
                         display_name = filename.split("__")[1] + " >> " + filename.split("__")[2]
                     else:
