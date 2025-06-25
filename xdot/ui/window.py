@@ -942,7 +942,7 @@ class SearchDialog(Gtk.Dialog):
         self.show_all()
 
     def on_key_press_event(self, widget, event):
-        print(event.keyval)
+
         if event.keyval == Gdk.KEY_Return or event.keyval == Gdk.KEY_KP_Enter:
             self.response(Gtk.ResponseType.OK)
 
