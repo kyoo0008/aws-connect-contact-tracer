@@ -117,8 +117,8 @@ def get_node_text_by_module_type(module_type,log,block_id):
 
 
         if log.get("ContactFlowId") and block_id:
-            comparison_value = get_comparison_value(log.get("ContactFlowId"),block_id,False)
-            comparison_second_value = get_comparison_value(log.get("ContactFlowId"),block_id,True)
+            comparison_value = get_comparison_value(log.get("ContactFlowId"),block_id,"ComparisonValue",False)
+            comparison_second_value = get_comparison_value(log.get("ContactFlowId"),block_id,"ComparisonValue",True)
 
         operand = ""
         if op == "Contains":
@@ -156,7 +156,9 @@ def get_node_text_by_module_type(module_type,log,block_id):
         if param_json.get("Parameters"): 
             parameters = param_json.get("Parameters")
             for key in parameters:
-                node_text += f"{wrap_text(f"{key} = {parameters[key]}",is_just_cut=True,max_length=25)} \n"
+                parameter_attr = get_comparison_value(log.get("ContactFlowId"),block_id,"LambdaInvocationAttributes",False)
+                
+                node_text += f"{wrap_text(f"{key} = {parameters[key]}",is_just_cut=True,max_length=25)} {"("+parameter_attr.get(key)+")" if "$" in parameter_attr.get(key) else ""}\n"
 
         if replaced_arn_log.get("ExternalResults"):
             node_footer = "ExternalResults : " + json.dumps(replaced_arn_log.get("ExternalResults",""), indent=2, ensure_ascii=False)

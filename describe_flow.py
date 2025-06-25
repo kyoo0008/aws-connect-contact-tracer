@@ -90,7 +90,7 @@ def get_contact_attributes(contact_id,region,file_name,instance_id):
     
 
 
-def get_comparison_value(flow_module_arn,block_id,is_second_value):
+def get_comparison_value(flow_module_arn,block_id,comparison_keyword,is_second_value):
     instance_id, entity_type, flow_id = extract_ids_from_arn(flow_module_arn)
 
     jsonfile_name = f"./virtual_env/describe_{entity_type}_{flow_id}.json"
@@ -104,7 +104,7 @@ def get_comparison_value(flow_module_arn,block_id,is_second_value):
 
         if target_block:
 
-            return target_block[0]["Parameters"].get("ComparisonValue")
+            return target_block[0]["Parameters"].get(comparison_keyword)
         else:
             return None
     else:
