@@ -298,7 +298,7 @@ def get_node_label(module_type, node_title, node_text, node_footer, block_id):
     return full_label
 
 # 일반 노드 처리
-def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs, error_count):
+def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs, error_count, module_stack):
     
     dot.attr(rankdir="LR", nodesep="0.5", ranksep="0.5")
 
@@ -401,7 +401,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
 
             if target_logs: # x-ray 추적 처리 
                 xray_trace_id = xid
-                dot,nodes,error_count = build_xray_dot(dot,nodes,error_count,xray_trace_id,connect_region,function_logs,log)
+                dot,nodes,error_count = build_xray_dot(dot,nodes,error_count,xray_trace_id,connect_region,function_logs,log,module_stack,contact_id)
 
                 
         except Exception:
@@ -505,7 +505,7 @@ def get_xray_parent_id(parent_id, xray_data):
     return None
                         
 
-def build_xray_nodes(xray_trace_id,associated_lambda_logs):
+def build_xray_nodes(xray_trace_id,associated_lambda_logs,module_stack,contact_id):
     xray_dot = Digraph(comment=f"AWS Lambda Xray Trace : {xray_trace_id}")
     
     xray_dot.attr(rankdir="LR", label=f"xray_trace_id : {xray_trace_id}", labelloc="t",fontsize="24",forcelabels="true")
@@ -601,13 +601,13 @@ def build_xray_nodes(xray_trace_id,associated_lambda_logs):
         if len(xray_nodes) > 0:
             apply_rank(xray_dot,xray_nodes)
 
-        xray_trace_file = f"./virtual_env/xray_trace_{xray_trace_id}"
+        xray_trace_file = f"./virtual_env/xray_trace_{contact_id}{module_stack}__{xray_trace_id}"
         xray_dot.render(xray_trace_file, format="dot", cleanup=True)
 
     
     return xray_trace_file
     
-def build_xray_dot(dot, nodes, error_count, xray_trace_id, connect_region, function_logs, log):
+def build_xray_dot(dot, nodes, error_count, xray_trace_id, connect_region, function_logs, log, module_stack, contact_id):
     xray_trace = get_xray_trace(xray_trace_id, connect_region)
     xray_text = ""
     if len(xray_trace) > 0:
@@ -638,7 +638,7 @@ def build_xray_dot(dot, nodes, error_count, xray_trace_id, connect_region, funct
     # xray trace dot
     # associated_lambda_logs = associated_lambda_logs.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
 
-    xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs)
+    xray_trace_file = build_xray_nodes(xray_trace_id,associated_lambda_logs,module_stack,contact_id)
     
 
     # level 값 가져오기
@@ -764,9 +764,6 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
 
     # 서브 그래프 생성
     if flow_type == "module":
-        sub_dot, _, module_error_count = build_module_detail(l_logs, l_name,lambda_logs,module_error_count) # To-do : node_id 정의 다시 하기 
-        node_title = "InvokeFlowModule"
-        error_count += module_error_count
 
         flow_name = ""
         flow_logs = []
@@ -777,12 +774,19 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
         if len(flow_arn_list) > 0:
             flow_name = flow_arn_list[0].get("ContactFlowName")
 
-        sub_file = f"./virtual_env/{flow_type}_{contact_id}__{flow_name}__{l_name}"
+        module_stack = f"__{flow_name}__{l_name}"
+
+        sub_dot, _, module_error_count = build_module_detail(l_logs, l_name,lambda_logs,module_error_count,module_stack) 
+        node_title = "InvokeFlowModule"
+        error_count += module_error_count
+
+        sub_file = f"./virtual_env/{flow_type}_{contact_id}{module_stack}"
 
     elif flow_type == "flow":
-        sub_dot,error_count = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs,error_count)
+        module_stack = f"__{l_name}"
+        sub_dot,error_count = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs,error_count,module_stack)
         node_title = "TransferToFlow"
-        sub_file = f"./virtual_env/{flow_type}_{contact_id}_{node_id}__{l_name}"
+        sub_file = f"./virtual_env/{flow_type}_{contact_id}_{node_id}{module_stack}"
     
     sub_dot.render(sub_file, format="dot", cleanup=True)
 
@@ -818,7 +822,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     return dot, nodes, l_nodes, error_count
 
 # Build Dot
-def build_module_detail(logs, module_name,lambda_logs,module_error_count):
+def build_module_detail(logs, module_name,lambda_logs,module_error_count,module_stack):
     """
     MOD_로 시작하는 모듈의 세부 정보를 시각화하는 그래프를 생성합니다.
     """
@@ -857,7 +861,7 @@ def build_module_detail(logs, module_name,lambda_logs,module_error_count):
                 node_cache = {}
 
             if module_type not in OMIT_CONTACT_FLOW_MODULE_TYPE:
-                m_dot, nodes, module_error_count = add_block_nodes(module_type, log, is_error, m_dot, nodes, node_id, lambda_logs,module_error_count)
+                m_dot, nodes, module_error_count = add_block_nodes(module_type, log, is_error, m_dot, nodes, node_id, lambda_logs,module_error_count,module_stack)
 
     # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
     # m_dot, nodes = dup_block_sanitize(node_cache, m_dot, nodes)
@@ -943,7 +947,7 @@ def build_lex_dot(contact_id,connect_region):
             
             # xray_trace_id = xid
             if xray_trace_id != "" and isTranscriptFound:
-                lex_dot,lex_nodes,_ = build_xray_dot(lex_dot,lex_nodes,0,xray_trace_id,connect_region,function_logs,{})
+                lex_dot,lex_nodes,_ = build_xray_dot(lex_dot,lex_nodes,0,xray_trace_id,connect_region,function_logs,{},None,contact_id)
 
             
 
@@ -1000,7 +1004,7 @@ def build_lex_hook_dot(contact_id,connect_region):
                 
             for xray_trace_id in xray_trace_ids:
                 
-                lex_hook_dot,nodes,error_count = build_xray_dot(lex_hook_dot,nodes,error_count,xray_trace_id,connect_region,function_logs,{})
+                lex_hook_dot,nodes,error_count = build_xray_dot(lex_hook_dot,nodes,error_count,xray_trace_id,connect_region,function_logs,{},None,contact_id)
 
 
             lex_hook_dot = add_edges(lex_hook_dot, nodes)
@@ -1084,7 +1088,7 @@ def build_transcript_dot(env,contact_id,region,instance_id):
         transcript_dot.render(f"./virtual_env/transcript_{contact_id}", format="dot", cleanup=True)
     return transcript_nodes
 
-def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_count):
+def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_count,module_stack):
     """
     Graphviz를 사용해 Contact Detail 흐름을 시각화하고,
     MOD_로 시작하는 모듈에 대한 세부 그래프를 추가 생성합니다.
@@ -1133,7 +1137,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_cou
                     node_cache = {}
 
                 if module_type not in OMIT_CONTACT_FLOW_MODULE_TYPE:
-                    dot, nodes, error_count = add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs,error_count)
+                    dot, nodes, error_count = add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs,error_count,module_stack)
 
     # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
     # dot, nodes = dup_block_sanitize(node_cache, dot, nodes)

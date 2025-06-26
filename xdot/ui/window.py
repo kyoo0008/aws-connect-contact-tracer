@@ -690,7 +690,9 @@ class DotWindow(Gtk.Window):
         self.textentry.set_icon_from_stock(0, Gtk.STOCK_FIND)
         find_toolitem.add(self.textentry)
 
+
         self.textentry.set_activates_default(True)
+        # self.textentry.set_activates_default(False)
         self.textentry.connect("activate", self.textentry_activate, self.textentry);
         self.textentry.connect("changed", self.textentry_changed, self.textentry);
 
@@ -991,7 +993,7 @@ class TextViewWindow(Gtk.Window):
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
                         content = f.read()
-                        if keyword in content and filename.endswith(".dot") and "xray" not in filename and "main_flow" not in filename:
+                        if keyword in content and filename.endswith(".dot") and "main_flow" not in filename:
                             for associated_contact_id in associated_contact_ids:
                                 if associated_contact_id in content and associated_contact_id in filename:
                                     result_files.append({associated_contact_id:filename})
@@ -999,6 +1001,8 @@ class TextViewWindow(Gtk.Window):
                     print(f"Error reading {filename}: {e}")
 
         if result_files:
+            result_files.sort(key=lambda x: list(x.keys())[0])
+
             result_text = f"🔍 Search Results: {len(result_files)} founds\n\n"
 
             self.populate_listbox(result_files, keyword)
@@ -1008,21 +1012,32 @@ class TextViewWindow(Gtk.Window):
         self.textbuffer.set_text(result_text)
 
     def populate_listbox(self, file_list, keyword):
+        display_list = []
         for file_dict in file_list:
             for contact_id, filename in file_dict.items():
-                row = Gtk.ListBoxRow()
                 display_name = ""
-                
                 if len(filename.split("__")) > 1:
                     if filename.startswith("module"):
                         display_name = filename.split("__")[1] + " >> " + filename.split("__")[2]
+                    elif filename.startswith("xray"):
+                        if len(filename.split("__")) == 3:
+                            display_name = filename.split("__")[1] + " >> " + filename.split("__")[2]
+                        elif len(filename.split("__")) == 4:
+                            display_name = filename.split("__")[1] + " >> " + filename.split("__")[2] + " >> " + filename.split("__")[3] + "(xray)"
                     else:
                         display_name = filename.split("__")[1]
-                button = Gtk.Button(label=f"🆔  :  {contact_id} → {display_name.replace(".dot","")}")
-                button.connect("clicked", self.on_file_selected, contact_id, filename, keyword)
-                row.add(button)
-                self.listbox.add(row)
 
+                display_name = display_name.replace(".dot", "")
+                display_list.append((contact_id, filename, display_name))
+
+        display_list.sort(key=lambda x: x[2])
+
+        for contact_id, filename, display_name in display_list:
+            row = Gtk.ListBoxRow()
+            button = Gtk.Button(label=f"🆔  :  {contact_id} → {display_name}")
+            button.connect("clicked", self.on_file_selected, contact_id, filename, keyword)
+            row.add(button)
+            self.listbox.add(row)
 
         self.listbox.show_all()
 
