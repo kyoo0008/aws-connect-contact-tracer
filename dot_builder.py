@@ -298,7 +298,7 @@ def get_node_label(module_type, node_title, node_text, node_footer, block_id):
     return full_label
 
 # 일반 노드 처리
-def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs, error_count, module_stack):
+def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs, error_count, module_stack, env):
     
     dot.attr(rankdir="LR", nodesep="0.5", ranksep="0.5")
 
@@ -330,7 +330,7 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
     # AWS Lambda Xray trace 추적
     if module_type == "InvokeExternalResource" and len(lambda_logs) > 0:
         
-        function_name = get_func_name(log.get("Parameters")["FunctionArn"])
+        function_name = get_func_name(log.get("Parameters")["FunctionArn"], env)
         try:
 
             function_logs = lambda_logs.get(function_name, [])  # 안전한 접근
@@ -736,7 +736,7 @@ def is_lambda_error(log):
         return False 
 
 # flow 묶음 처리
-def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_id,lambda_logs,error_count):
+def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_id,lambda_logs,error_count,env):
 
     min_timestamp, max_timestamp = None, None
     module_error_count = 0
@@ -776,7 +776,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
 
         module_stack = f"__{flow_name}__{l_name}"
 
-        sub_dot, _, module_error_count = build_module_detail(l_logs, l_name,lambda_logs,module_error_count,module_stack) 
+        sub_dot, _, module_error_count = build_module_detail(l_logs, l_name,lambda_logs,module_error_count,module_stack,env) 
         node_title = "InvokeFlowModule"
         error_count += module_error_count
 
@@ -784,7 +784,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
 
     elif flow_type == "flow":
         module_stack = f"__{l_name}"
-        sub_dot,error_count = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs,error_count,module_stack)
+        sub_dot,error_count = build_contact_flow_detail(l_logs,l_name,contact_id,lambda_logs,error_count,module_stack, env)
         node_title = "TransferToFlow"
         sub_file = f"./virtual_env/{flow_type}_{contact_id}_{node_id}{module_stack}"
     
@@ -822,7 +822,7 @@ def process_sub_flow(flow_type,dot,nodes,l_nodes,l_name,node_id,l_logs,contact_i
     return dot, nodes, l_nodes, error_count
 
 # Build Dot
-def build_module_detail(logs, module_name,lambda_logs,module_error_count,module_stack):
+def build_module_detail(logs, module_name,lambda_logs,module_error_count,module_stack, env):
     """
     MOD_로 시작하는 모듈의 세부 정보를 시각화하는 그래프를 생성합니다.
     """
@@ -861,7 +861,7 @@ def build_module_detail(logs, module_name,lambda_logs,module_error_count,module_
                 node_cache = {}
 
             if module_type not in OMIT_CONTACT_FLOW_MODULE_TYPE:
-                m_dot, nodes, module_error_count = add_block_nodes(module_type, log, is_error, m_dot, nodes, node_id, lambda_logs,module_error_count,module_stack)
+                m_dot, nodes, module_error_count = add_block_nodes(module_type, log, is_error, m_dot, nodes, node_id, lambda_logs,module_error_count,module_stack, env)
 
     # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
     # m_dot, nodes = dup_block_sanitize(node_cache, m_dot, nodes)
@@ -1088,7 +1088,7 @@ def build_transcript_dot(env,contact_id,region,instance_id):
         transcript_dot.render(f"./virtual_env/transcript_{contact_id}", format="dot", cleanup=True)
     return transcript_nodes
 
-def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_count,module_stack):
+def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_count,module_stack,env):
     """
     Graphviz를 사용해 Contact Detail 흐름을 시각화하고,
     MOD_로 시작하는 모듈에 대한 세부 그래프를 추가 생성합니다.
@@ -1121,7 +1121,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_cou
             if module_name not in module_nodes:  # 처음 등장한 모듈만 생성
                 module_logs = [l for l in logs if l['ContactFlowName'] == module_name]
 
-                dot,nodes,module_nodes,error_count = process_sub_flow(flow_type,dot,nodes,module_nodes,module_name,node_id,module_logs,contact_id,lambda_logs,error_count)
+                dot,nodes,module_nodes,error_count = process_sub_flow(flow_type,dot,nodes,module_nodes,module_name,node_id,module_logs,contact_id,lambda_logs,error_count, env)
             else:
                 node_id = module_nodes[module_name]  # 기존 모듈 노드를 참조
         else:
@@ -1137,7 +1137,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_cou
                     node_cache = {}
 
                 if module_type not in OMIT_CONTACT_FLOW_MODULE_TYPE:
-                    dot, nodes, error_count = add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs,error_count,module_stack)
+                    dot, nodes, error_count = add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs,error_count,module_stack, env)
 
     # ✅ 중복된 모듈 타입 노드들을 하나의 노드로 생성
     # dot, nodes = dup_block_sanitize(node_cache, dot, nodes)
@@ -1150,7 +1150,7 @@ def build_contact_flow_detail(logs, flow_name, contact_id, lambda_logs,error_cou
 
     return dot, error_count
 
-def build_main_flow(logs, lambda_logs, contact_id):
+def build_main_flow(logs, lambda_logs, contact_id, env):
     """메인 Contact 흐름을 시각화합니다."""
     main_flow_dot = Digraph(comment="Amazon Connect Contact Flow")
     main_flow_dot.attr(rankdir="LR")
@@ -1180,7 +1180,7 @@ def build_main_flow(logs, lambda_logs, contact_id):
 
         info = node_info[node_id]
 
-        main_flow_dot,nodes,flow_nodes,error_count = process_sub_flow(flow_type,main_flow_dot,nodes,flow_nodes,info['contact_flow_name'],node_id,info["subnode"],contact_id,lambda_logs,error_count)
+        main_flow_dot,nodes,flow_nodes,error_count = process_sub_flow(flow_type,main_flow_dot,nodes,flow_nodes,info['contact_flow_name'],node_id,info["subnode"],contact_id,lambda_logs,error_count, env)
 
     main_flow_dot = add_edges(main_flow_dot, nodes)
 
@@ -1288,7 +1288,7 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         lambda_logs = subcontact_lambda_logs[contact_id]
 
         # Graph 생성 시작
-        contact_graph, nodes = build_main_flow(logs, lambda_logs, contact_id)
+        contact_graph, nodes = build_main_flow(logs, lambda_logs, contact_id, env)
 
         # Transcript Node 생성 
         transcript_nodes = build_transcript_dot(env,contact_id,region,instance_id)

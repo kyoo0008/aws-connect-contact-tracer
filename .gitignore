@@ -2,4 +2,4 @@ virtual_env/
 *.pyc
 __pycache__/
 .idea/
-
+test_connect_contact_tracker.sh

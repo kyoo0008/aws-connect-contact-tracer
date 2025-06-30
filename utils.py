@@ -174,15 +174,18 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
                 # Lambda 함수 수집 
                 if json_value.get("ContactFlowModuleType") == "InvokeExternalResource":
                     function_arn = json_value.get("Parameters")["FunctionArn"]
-                    params = json_value.get("Parameters")["Parameters"]
+                    
 
 
-                    lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn))
+                    lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn, env))
                     if "idnv-common-if" in function_arn: # common-if 예외처리 
-                        lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn.replace("common-if","async-if")))
+                        lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn.replace("common-if","async-if"),env))
 
-                    if params.get("keywords") and "chat" == params.get("keywords"):
-                        lambda_log_groups.add("/aws/lmd/aicc-chat-app/alb-chat-if")
+
+                    if json_value.get("Parameters").get("Parameters"):
+                        params = json_value.get("Parameters")["Parameters"]
+                        if params.get("keywords") and "chat" == params.get("keywords"):
+                            lambda_log_groups.add("/aws/lmd/aicc-chat-app/alb-chat-if")
 
 
     # JSON 파일 저장    
@@ -209,7 +212,7 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
     lambda_logs = {}
 
     for lambda_log_group in lambda_log_groups:
-        function_name = lambda_log_group.split("/")[4]
+        function_name = lambda_log_group.split("/")[-1]
         lambda_logs[function_name] = fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
 
     try:
@@ -221,11 +224,16 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
     return logs, lambda_logs, contact_flow_ids
 
 # flow-internal-handler
-def get_func_name(arn):
-    return "-".join(arn.split(":")[6].split("-")[3:])
+def get_func_name(arn, env):
+    return "-".join(arn.split(":")[6].split("-")[3:]) \
+        if env != "test" \
+        else arn.split(":")[-1]
 
-def get_lambda_log_groups_from_arn(arn):
-    return "/aws/lmd/aicc-connect-flow-base/"+get_func_name(arn)
+def get_lambda_log_groups_from_arn(arn, env):
+
+    return "/aws/lmd/aicc-connect-flow-base/"+get_func_name(arn, env) \
+        if env != "test" \
+        else "/aws/lambda/"+get_func_name(arn, env)
 
 def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
 

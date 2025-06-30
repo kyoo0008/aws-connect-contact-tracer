@@ -56,36 +56,36 @@ def get_analysis_object(env,contact_id,region,instance_id):
     
     # S3 클라이언트 생성
     s3_client = boto3.client('s3', region_name=region)
+    if env != "test":
+        response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=prefix)
+        
+        for obj in response.get('Contents', []):
 
-    response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=prefix)
-    
-    for obj in response.get('Contents', []):
+            s3_key = obj['Key']
 
-        s3_key = obj['Key']
+            if contact_id in s3_key:
+                print("Transcript Found")
+                try:
+                    data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+                    conversation_data = data['Body'].read().decode('utf-8')
 
-        if contact_id in s3_key:
-            print("Transcript Found")
-            try:
-                data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-                conversation_data = data['Body'].read().decode('utf-8')
+                    transcript = json.loads(conversation_data).get('Transcript',[])
+                    
+                    return transcript
+                except botocore.exceptions.ClientError as e:
+                    error_code = e.response['Error']['Code']
+                    print(f"❌ Failed to get transcript from S3: {error_code}")
+                    if error_code == "AccessDenied":
+                        print("🔒 Access denied. Likely due to KMS Decrypt permission or cross-region resource.")
+                    elif error_code == "NoSuchKey":
+                        print("📂 S3 key not found.")
+                    else:
+                        print(f"⚠️ Unhandled S3 error: {e}")
+                    return []
 
-                transcript = json.loads(conversation_data).get('Transcript',[])
-                
-                return transcript
-            except botocore.exceptions.ClientError as e:
-                error_code = e.response['Error']['Code']
-                print(f"❌ Failed to get transcript from S3: {error_code}")
-                if error_code == "AccessDenied":
-                    print("🔒 Access denied. Likely due to KMS Decrypt permission or cross-region resource.")
-                elif error_code == "NoSuchKey":
-                    print("📂 S3 key not found.")
-                else:
-                    print(f"⚠️ Unhandled S3 error: {e}")
-                return []
-
-            except Exception as e:
-                print(f"❗ Unexpected error while fetching transcript: {e}")
-                return []
+                except Exception as e:
+                    print(f"❗ Unexpected error while fetching transcript: {e}")
+                    return []
 
     return []
 
