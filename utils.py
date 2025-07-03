@@ -166,9 +166,12 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
                     contact_flow_ids.add(json_value.get("ContactFlowId"))
 
                 if "BotAliasArn" in str(json_value):
-                    
-                    lambda_log_groups.add(f"/aws/lex/aicc/{get_bot_name_from_alias_arn(json_value.get("Parameters")["BotAliasArn"])}")
-                    lambda_log_groups.add("/aws/lmd/aicc-voicebot-app/lex-hook-func")
+                    if env != "test":
+                        lambda_log_groups.add(f"/aws/lex/aicc/{get_bot_name_from_alias_arn(json_value.get("Parameters")["BotAliasArn"])}")
+                        lambda_log_groups.add("/aws/lmd/aicc-voicebot-app/lex-hook-func")
+                    else:
+                        lambda_log_groups.add("/aws/lex/TMSSWIWT4K")
+                        lambda_log_groups.add("/aws/lambda/nova-trigger-test")
 
 
                 # Lambda 함수 수집 

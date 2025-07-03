@@ -5,6 +5,8 @@ import time
 import pytz
 import boto3
 import os.path
+import uuid
+
 from datetime import datetime, timedelta
 from collections import defaultdict
 from graphviz import Digraph
@@ -874,6 +876,7 @@ def build_module_detail(logs, module_name,lambda_logs,module_error_count,module_
 
 def build_lex_dot(contact_id,connect_region):
     lex_nodes=[]
+    function_logs = []
     file_path = f"./virtual_env/lex_{contact_id}.json"
     lex_transcript = []
     # Transcript 생성
@@ -898,25 +901,25 @@ def build_lex_dot(contact_id,connect_region):
 
         for index,script in enumerate(lex_transcript):
             
-            customer_node_id = script.get("requestId")+"-customer"
+            customer_node_id = script.get("requestId",str(uuid.uuid4()))+"-customer"
             # 고객 node
             lex_nodes.append(customer_node_id)
 
             intent_footer = ""
 
-            max_intent_nlu_confidence_score = 0.0
-            max_intent_nlu_confidence_name = ""
+            # max_intent_nlu_confidence_score = 0.0
+            # max_intent_nlu_confidence_name = ""
 
+
+            # for intent in script.get("interpretations",[]):
+            #     # print(str(max_intent_nlu_confidence_score) + " / " + max_intent_nlu_confidence_name)
+            #     if float(intent.get("nluConfidence",0)) > max_intent_nlu_confidence_score:
+            #         max_intent_nlu_confidence_score = float(intent.get("nluConfidence",0))
+            #         max_intent_nlu_confidence_name = intent.get("intent",{})["name"]
 
             for intent in script.get("interpretations",[]):
-                # print(str(max_intent_nlu_confidence_score) + " / " + max_intent_nlu_confidence_name)
-                if float(intent.get("nluConfidence",0)) > max_intent_nlu_confidence_score:
-                    max_intent_nlu_confidence_score = float(intent.get("nluConfidence",0))
-                    max_intent_nlu_confidence_name = intent.get("intent",{})["name"]
-
-            for intent in script.get("interpretations",[]):
-                if max_intent_nlu_confidence_name == intent.get("intent",{})["name"]:
-                    intent_footer += f"* {intent.get("intent",{})["name"]} : {intent.get("nluConfidence","")}\n"
+                if script.get("sessionState",{}).get("intent",{}).get("name","") == intent.get("intent",{})["name"]:
+                    intent_footer += f"* {intent.get("intent",{})["name"]} : {intent.get("nluConfidence","0.0")}\n"
                 else:
                     intent_footer += f"{intent.get("intent",{})["name"]} : {intent.get("nluConfidence","0.0")}\n"
 
@@ -936,18 +939,18 @@ def build_lex_dot(contact_id,connect_region):
 
             
             # if "CodeHook" in str(json.dumps(script)) or :
-            
-            xray_trace_id = find_lex_xray_timestamp(script,function_logs)
+            if len(function_logs) > 0:            
+                xray_trace_id = find_lex_xray_timestamp(script,function_logs)
 
-            isTranscriptFound = False
-            for l in function_logs:
-                if l.get("xray_trace_id") == xray_trace_id and l.get("event",{}).get("inputTranscript") == script.get("inputTranscript"):
-                    isTranscriptFound = True
+                isTranscriptFound = False
+                for l in function_logs:
+                    if l.get("xray_trace_id") == xray_trace_id and l.get("event",{}).get("inputTranscript") == script.get("inputTranscript"):
+                        isTranscriptFound = True
 
-            
-            # xray_trace_id = xid
-            if xray_trace_id != "" and isTranscriptFound:
-                lex_dot,lex_nodes,_ = build_xray_dot(lex_dot,lex_nodes,0,xray_trace_id,connect_region,function_logs,{},None,contact_id)
+                
+                # xray_trace_id = xid
+                if xray_trace_id != "" and isTranscriptFound:
+                    lex_dot,lex_nodes,_ = build_xray_dot(lex_dot,lex_nodes,0,xray_trace_id,connect_region,function_logs,{},None,contact_id)
 
             
 
