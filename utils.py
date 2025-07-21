@@ -293,7 +293,7 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
     logs = filter_lambda_logs(response)
 
     # To-do : delete
-    if "/aws/lex/" in log_group or "hook-func" in log_group:
+    if "/aws/lex/" in log_group or "hook-func" in log_group or "nova-trigger-test" in log_group:
         # JSON 파일 저장    
         output_json_path = f"./virtual_env/lex_{contact_id}.json" if "/aws/lex/" in log_group else f"./virtual_env/lex_hook_{contact_id}.json"
         with open(output_json_path, "w", encoding="utf-8") as json_file:

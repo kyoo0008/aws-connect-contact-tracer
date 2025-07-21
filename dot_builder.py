@@ -955,7 +955,7 @@ def build_lex_dot(contact_id,connect_region):
             
 
             # AI 상담사 Node
-            agent_node_id = script.get("requestId")+"-agent"
+            agent_node_id = script.get("requestId","")+"-agent"
 
             lex_nodes.append(agent_node_id)
             agent_transcript = ""
