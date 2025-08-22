@@ -962,7 +962,11 @@ def build_lex_dot(contact_id,connect_region):
             for message in script.get("messages",[]):
                 agent_transcript += message.get("content","")
 
+            tool = script.get("sessionState",{}).get("sessionAttributes",{}).get("Tool","")
 
+            if tool != "":
+                intent_footer = f"Tool : {tool}"
+                
 
             lex_dot.node(
                 agent_node_id,
