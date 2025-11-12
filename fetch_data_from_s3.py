@@ -1,31 +1,45 @@
-import boto3
+"""
+S3에서 AWS Connect 데이터 조회 및 처리 모듈
+
+이 모듈은 S3에 백업된 Contact 및 Lambda 로그를 조회하고,
+Transcript 데이터를 가져오는 기능을 제공합니다.
+"""
 import gzip
 import io
 import json
 import os
-import sys
-import csv
 import re
-import pytz
-import datetime
-import botocore
 from datetime import datetime, timedelta
+from typing import Dict, List, Tuple, Optional, Any
+
+import boto3
+import botocore
+import pytz
 
 
-log_pattern = re.compile(r"\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}")
+# Constants
+OUTPUT_DIR = './s3/'
+VIRTUAL_ENV_DIR = './virtual_env'
+LOG_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}")
+BUCKET_NAME_TEMPLATE = "aicc-{env}-an2-s3-{suffix}"
 
 
 
-output_dir = './s3/'  # 로컬에 저장할 출력 디렉토리
+def get_contact_timestamp(contact_id: str, region: str,
+                         instance_id: str) -> Tuple[datetime, Optional[datetime]]:
+    """
+    Contact의 시작 및 종료 시간을 조회
 
-contact_ids = set()
-file_names = set()
+    Args:
+        contact_id: Contact ID
+        region: AWS 리전
+        instance_id: Connect Instance ID
 
-
-
-def get_contact_timestamp(contact_id,region,instance_id):
-    """AWS Connect Contact Flow 정보를 가져와 JSON 파일로 저장"""
-
+    Returns:
+        Tuple[initiation_time, disconnect_time]
+        - initiation_time: 시작 시간 - 1분
+        - disconnect_time: 종료 시간 + 10분 (종료되지 않았으면 None)
+    """
     client = boto3.client("connect", region_name=region)
 
     response = client.describe_contact(
@@ -33,59 +47,89 @@ def get_contact_timestamp(contact_id,region,instance_id):
         ContactId=contact_id
     )
 
-    # init -1분, disconnect +10분
-    initiation_time = datetime.fromisoformat(str(response["Contact"]["InitiationTimestamp"])).astimezone(pytz.UTC) - timedelta(minutes=1)
-    if response["Contact"].get("DisconnectTimestamp"):
-        disconnect_time = datetime.fromisoformat(str(response["Contact"]["DisconnectTimestamp"])).astimezone(pytz.UTC) + timedelta(minutes=10)
-        return initiation_time.replace(tzinfo=None),disconnect_time.replace(tzinfo=None)
-    else:
-        return initiation_time.replace(tzinfo=None),None
+    contact_data = response["Contact"]
 
-    
+    # 시작 시간에서 1분 빼기 (로그 여유시간)
+    initiation_time = (
+        datetime.fromisoformat(str(contact_data["InitiationTimestamp"]))
+        .astimezone(pytz.UTC) - timedelta(minutes=1)
+    ).replace(tzinfo=None)
 
-def get_analysis_object(env,contact_id,region,instance_id):
-    
-    """대화 내용을 가져와서 파일로 저장"""
+    # 종료 시간이 있으면 10분 더하기 (로그 여유시간)
+    disconnect_time = None
+    if contact_data.get("DisconnectTimestamp"):
+        disconnect_time = (
+            datetime.fromisoformat(str(contact_data["DisconnectTimestamp"]))
+            .astimezone(pytz.UTC) + timedelta(minutes=10)
+        ).replace(tzinfo=None)
 
-    bucket_name = f"aicc-{env}-an2-s3-acn-storage"
+    return initiation_time, disconnect_time
 
-    initiation_time,disconnect_time = get_contact_timestamp(contact_id,region,instance_id)
 
-    prefix = "Analysis/Voice/"+"/".join(str(disconnect_time if disconnect_time else initiation_time).split(" ")[0].split("-"))+"/"+contact_id
-    
-    
-    # S3 클라이언트 생성
+
+def get_analysis_object(env: str, contact_id: str, region: str,
+                       instance_id: str) -> List[Dict[str, Any]]:
+    """
+    S3에서 Contact의 대화 분석 결과(Transcript)를 가져옵니다
+
+    Args:
+        env: 환경 (test, qic, prod 등)
+        contact_id: Contact ID
+        region: AWS 리전
+        instance_id: Connect Instance ID
+
+    Returns:
+        Transcript 리스트
+    """
+    # test, qic 환경은 Transcript를 지원하지 않음
+    if env in ("test", "qic"):
+        return []
+
+    bucket_name = BUCKET_NAME_TEMPLATE.format(env=env, suffix="acn-storage")
+    initiation_time, disconnect_time = get_contact_timestamp(contact_id, region, instance_id)
+
+    # S3 prefix 생성: Analysis/Voice/YYYY/MM/DD/contact_id
+    timestamp = disconnect_time if disconnect_time else initiation_time
+    date_parts = str(timestamp).split(" ")[0].split("-")
+    prefix = f"Analysis/Voice/{'/'.join(date_parts)}/{contact_id}"
+
     s3_client = boto3.client('s3', region_name=region)
-    if env != "test":
-        response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=prefix)
-        
-        for obj in response.get('Contents', []):
 
+    try:
+        response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+
+        for obj in response.get('Contents', []):
             s3_key = obj['Key']
 
-            if contact_id in s3_key:
-                print("Transcript Found")
-                try:
-                    data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-                    conversation_data = data['Body'].read().decode('utf-8')
+            if contact_id not in s3_key:
+                continue
 
-                    transcript = json.loads(conversation_data).get('Transcript',[])
-                    
-                    return transcript
-                except botocore.exceptions.ClientError as e:
-                    error_code = e.response['Error']['Code']
-                    print(f"❌ Failed to get transcript from S3: {error_code}")
-                    if error_code == "AccessDenied":
-                        print("🔒 Access denied. Likely due to KMS Decrypt permission or cross-region resource.")
-                    elif error_code == "NoSuchKey":
-                        print("📂 S3 key not found.")
-                    else:
-                        print(f"⚠️ Unhandled S3 error: {e}")
-                    return []
+            print("Transcript Found")
+            try:
+                data = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+                conversation_data = data['Body'].read().decode('utf-8')
+                transcript = json.loads(conversation_data).get('Transcript', [])
+                return transcript
 
-                except Exception as e:
-                    print(f"❗ Unexpected error while fetching transcript: {e}")
-                    return []
+            except botocore.exceptions.ClientError as e:
+                error_code = e.response['Error']['Code']
+                print(f"Failed to get transcript from S3: {error_code}")
+
+                if error_code == "AccessDenied":
+                    print("Access denied. Check KMS Decrypt permission or cross-region access.")
+                elif error_code == "NoSuchKey":
+                    print("S3 key not found.")
+                else:
+                    print(f"Unhandled S3 error: {e}")
+                return []
+
+            except Exception as e:
+                print(f"Unexpected error while fetching transcript: {e}")
+                return []
+
+    except botocore.exceptions.ClientError as e:
+        print(f"Failed to list S3 objects: {e}")
+        return []
 
     return []
 

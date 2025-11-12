@@ -1201,6 +1201,13 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
     connect_region = region
     client = boto3.client("connect", region_name=region)
 
+    # associated_contacts 형식 검증
+    if not isinstance(associated_contacts, dict):
+        raise ValueError(f"associated_contacts must be a dict, got {type(associated_contacts)}")
+
+    if "ContactSummaryList" not in associated_contacts:
+        raise ValueError("associated_contacts must contain 'ContactSummaryList' key")
+
     search_contacts = associated_contacts["ContactSummaryList"] if ASSOCIATED_CONTACTS_FLAG else [l for l in associated_contacts["ContactSummaryList"] if l.get("ContactId") == selected_contact_id]
 
     dot = Digraph("Amazon Connect Contact Flow", engine="neato", filename="contact_flow.gv")

@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment (호스트의 가상환경은 제외)
+virtual_env/
+virtual_env
+venv/
+env/
+ENV/
+
+# 생성된 그래프 파일
+*.dot
+*.svg
+*.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Test
+.pytest_cache/
+.coverage
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+*.md
+!requirements.txt

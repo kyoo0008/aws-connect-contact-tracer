@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Connect Contact Tracer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+
+        .search-section {
+            margin-bottom: 30px;
+        }
+
+        .option-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .option-btn {
+            padding: 20px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            background: white;
+            color: #667eea;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .option-btn.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .input-section {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .input-section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .contacts-list {
+            margin: 20px 0;
+        }
+
+        .contact-item {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .contact-item:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-section.active {
+            display: block;
+        }
+
+        .contact-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .graph-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .graph-container svg {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .graph-viewer {
+            width: 100%;
+            overflow: auto;
+            background: #f8f9fa;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .graph-controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📞 AWS Connect Contact Tracer</h1>
+
+        <!-- 검색 옵션 선택 -->
+        <div class="search-section">
+            <h2 style="margin-bottom: 20px;">검색 방법 선택</h2>
+            <div class="option-grid" id="optionGrid"></div>
+        </div>
+
+        <!-- 입력 섹션 -->
+        <div class="input-section" id="inputSection">
+            <div class="form-group" id="inputFormGroup"></div>
+            <button class="btn btn-primary" onclick="performSearch()">검색</button>
+            <button class="btn btn-secondary" onclick="resetSearch()">초기화</button>
+        </div>
+
+        <!-- 로딩 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #666;">처리 중입니다...</p>
+        </div>
+
+        <!-- 메시지 -->
+        <div id="messageContainer"></div>
+
+        <!-- Contact 목록 -->
+        <div class="contacts-list" id="contactsList"></div>
+
+        <!-- 결과 섹션 -->
+        <div class="result-section" id="resultSection">
+            <h2>Contact 상세 정보</h2>
+            <div class="contact-details" id="contactDetails"></div>
+            <div class="graph-container" id="graphContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedSearchType = null;
+
+        // 초기화
+        async function init() {
+            const response = await fetch('/api/init', { method: 'POST' });
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                renderOptions(data.options);
+            }
+        }
+
+        // 옵션 렌더링
+        function renderOptions(options) {
+            const grid = document.getElementById('optionGrid');
+            grid.innerHTML = '';
+
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option;
+                btn.onclick = () => selectOption(option);
+                grid.appendChild(btn);
+            });
+        }
+
+        // 옵션 선택
+        function selectOption(option) {
+            selectedSearchType = option;
+
+            // 버튼 스타일 업데이트
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.textContent === option);
+            });
+
+            // 입력 폼 표시
+            showInputForm(option);
+        }
+
+        // 입력 폼 표시
+        function showInputForm(searchType) {
+            const inputSection = document.getElementById('inputSection');
+            const formGroup = document.getElementById('inputFormGroup');
+
+            inputSection.classList.add('active');
+            formGroup.innerHTML = '';
+
+            let inputHtml = '';
+
+            switch (searchType) {
+                case 'ContactId':
+                    inputHtml = `
+                        <label>Contact ID (UUID)</label>
+                        <input type="text" id="searchInput" placeholder="예: 12345678-1234-1234-1234-123456789abc">
+                    `;
+                    break;
+                case 'Customer':
+                    inputHtml = `
+                        <label>Customer Profile ID, 전화번호 또는 Skypass 번호</label>
+                        <input type="text" id="searchInput" placeholder="예: +821012341234 또는 32자리 Profile ID">
+                    `;
+                    break;
+                case 'Agent':
+                    inputHtml = `
+                        <label>Agent ID, 이름 또는 Email</label>
+                        <input type="text" id="searchInput" placeholder="예: 홍길동 또는 agent@example.com">
+                    `;
+                    break;
+                case 'ContactFlow':
+                    inputHtml = `
+                        <label>ContactFlow 명</label>
+                        <input type="text" id="searchInput" placeholder="예: 05_CustomerQueue">
+                    `;
+                    break;
+                case 'DNIS':
+                    inputHtml = `
+                        <label>DNIS (E.164 포맷)</label>
+                        <input type="text" id="searchInput" placeholder="예: +82269269240">
+                    `;
+                    break;
+                case 'History':
+                    // History는 입력 불필요
+                    performSearch();
+                    return;
+                case 'LambdaError':
+                    inputHtml = `
+                        <label>에러 타입</label>
+                        <select id="searchInput" class="form-control" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                            <option value="Lambda Error">Lambda Error</option>
+                            <option value="Timeout">Timeout</option>
+                        </select>
+                    `;
+                    break;
+            }
+
+            formGroup.innerHTML = inputHtml;
+        }
+
+        // 검색 실행
+        async function performSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const searchValue = searchInput ? searchInput.value : '';
+
+            showLoading(true);
+            hideMessage();
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        search_type: selectedSearchType,
+                        search_value: searchValue,
+                        error_type: searchValue
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    if (data.contact_id) {
+                        // Contact ID 직접 조회
+                        selectContact(data.contact_id);
+                    } else if (data.contacts) {
+                        // Contact 목록 표시
+                        renderContactsList(data.contacts);
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('검색 중 오류가 발생했습니다: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Contact 목록 렌더링
+        function renderContactsList(contacts) {
+            const listContainer = document.getElementById('contactsList');
+
+            if (contacts.length === 0) {
+                showMessage('검색 결과가 없습니다.', 'info');
+                listContainer.innerHTML = '';
+                return;
+            }
+
+            listContainer.innerHTML = '<h3>검색 결과</h3>';
+
+            contacts.forEach(contact => {
+                const item = document.createElement('div');
+                item.className = 'contact-item';
+                item.innerHTML = `
+                    <strong>${contact.contact_id}</strong><br>
+                    <small>${contact.created_time || contact.timestamp || ''}</small>
+                `;
+                item.onclick = () => selectContact(contact.contact_id);
+                listContainer.appendChild(item);
+            });
+        }
+
+        // Contact 선택 및 상세 조회
+        async function selectContact(contactId) {
+            showLoading(true);
+            hideMessage();
+
+            try {
+                const response = await fetch('/api/select_contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contact_id: contactId })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showResult(data);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('조회 중 오류가 발생했습니다: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 결과 표시
+        function showResult(data) {
+            const resultSection = document.getElementById('resultSection');
+            const detailsContainer = document.getElementById('contactDetails');
+            const graphContainer = document.getElementById('graphContainer');
+
+            resultSection.classList.add('active');
+
+            // 상세 정보 표시
+            detailsContainer.innerHTML = `
+                <div class="detail-item">
+                    <strong>처리 완료</strong><br>
+                    <pre style="margin-top: 10px; white-space: pre-wrap;">${data.output || ''}</pre>
+                </div>
+            `;
+
+            // 그래프 표시 (SVG 우선, 없으면 DOT)
+            if (data.svg_file) {
+                loadAndDisplaySVG(data.svg_file);
+            } else if (data.graph_file) {
+                graphContainer.innerHTML = `
+                    <h3>Flow 그래프 (DOT 파일)</h3>
+                    <p>SVG 파일을 생성할 수 없어 DOT 파일을 표시합니다.</p>
+                    <iframe src="/api/graph/${data.graph_file}" style="width: 100%; height: 600px; border: 2px solid #ddd; border-radius: 10px;"></iframe>
+                `;
+            }
+
+            showMessage('Contact 정보를 성공적으로 조회했습니다.', 'success');
+        }
+
+        // SVG 파일 로드 및 표시
+        async function loadAndDisplaySVG(svgPath) {
+            const graphContainer = document.getElementById('graphContainer');
+
+            try {
+                const response = await fetch(`/api/graph/${svgPath}`);
+                const svgContent = await response.text();
+
+                graphContainer.innerHTML = `
+                    <h3>Flow 그래프</h3>
+                    <div class="graph-controls">
+                        <button class="btn btn-secondary" onclick="zoomIn()">확대 +</button>
+                        <button class="btn btn-secondary" onclick="zoomOut()">축소 -</button>
+                        <button class="btn btn-secondary" onclick="resetZoom()">원래 크기</button>
+                        <a href="/api/graph/${svgPath}" download class="btn btn-secondary" style="text-decoration: none;">다운로드</a>
+                    </div>
+                    <div class="graph-viewer" id="graphViewer">
+                        ${svgContent}
+                    </div>
+                `;
+
+                // SVG 요소에 줌 기능 추가
+                initializeZoom();
+            } catch (error) {
+                graphContainer.innerHTML = `
+                    <h3>Flow 그래프</h3>
+                    <div class="message error">그래프를 로드할 수 없습니다: ${error.message}</div>
+                `;
+            }
+        }
+
+        // 줌 관련 변수
+        let currentZoom = 1;
+
+        function initializeZoom() {
+            const viewer = document.getElementById('graphViewer');
+            const svg = viewer.querySelector('svg');
+            if (svg) {
+                svg.style.transform = `scale(${currentZoom})`;
+                svg.style.transformOrigin = 'center center';
+                svg.style.transition = 'transform 0.3s ease';
+            }
+        }
+
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 0.2, 3);
+            updateZoom();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 0.2, 0.5);
+            updateZoom();
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            updateZoom();
+        }
+
+        function updateZoom() {
+            const viewer = document.getElementById('graphViewer');
+            const svg = viewer.querySelector('svg');
+            if (svg) {
+                svg.style.transform = `scale(${currentZoom})`;
+            }
+        }
+
+        // 검색 초기화
+        function resetSearch() {
+            selectedSearchType = null;
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('inputSection').classList.remove('active');
+            document.getElementById('contactsList').innerHTML = '';
+            document.getElementById('resultSection').classList.remove('active');
+            hideMessage();
+        }
+
+        // 로딩 표시
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+
+        // 메시지 표시
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="message ${type}">${message}</div>`;
+        }
+
+        // 메시지 숨기기
+        function hideMessage() {
+            document.getElementById('messageContainer').innerHTML = '';
+        }
+
+        // 페이지 로드 시 초기화
+        window.onload = init;
+    </script>
+</body>
+</html>

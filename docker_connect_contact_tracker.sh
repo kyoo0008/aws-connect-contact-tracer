@@ -3,11 +3,11 @@
 # Copyright © Amazon.com and Affiliates: This deliverable is considered Developed Content as defined in the AWS Service Terms and the SOW between the parties dated [March 18, 2024].
 
 ###
+# Docker 환경에서 실행하기 위한 스크립트
 # 현재 Git Repo의 Flow JSON 파일을 Local에서 분석하여, Terraform HCL 코드로 IaC 작성에 도움을 줄 수 있는 예시코드를 생성하는 Python 스크립트를 실행
 #
 
 VENV_DIR="virtual_env"
-# PYTHON_SCRIPT_FILE="test.py"
 PYTHON_SCRIPT_FILE="main.py"
 REQUIREMENTS_FILE="requirements.txt"
 EMAIL_REGEX="^[a-zA-Z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-zA-Z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\$"
@@ -15,7 +15,7 @@ UUID_REGEX=^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0
 HANGUL_NAME_REGEX="^[가-힣]{2,}[a-zA-Z]?$"  # 한글 두 글자 이상 + 선택적 영문자
 ENG_NAME_REGEX="^[a-zA-Z ]+"
 cols_num=5
-DISPLAY='TRUE'  
+
 
 # Insights 쿼리
 QUERY='fields @timestamp, @message, @logStream, @log
@@ -41,19 +41,9 @@ else
   source "$VENV_DIR/bin/activate"
 fi
 
+# Docker 환경에서는 gtk+3가 이미 시스템 패키지로 설치되어 있음
+echo "✅ GTK+3는 Docker 이미지에 포함되어 있습니다."
 
-
-# tkinter 설치
-if ! brew list gtk+3 &> /dev/null; then
-    echo "gtk+3이 설치되어 있지 않습니다. 설치를 시작합니다."
-    brew install gtk+3
-    if [ $? -eq 0 ]; then
-        echo "gtk+3이 성공적으로 설치되었습니다."
-    else
-        echo "gtk+3 설치에 실패했습니다. 에러 로그를 확인하세요."
-        exit 1
-    fi
-fi
 # AWS Profile 값 확인
 profile_value=$(aws configure list | awk -F: '/profile/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}')
 region_value=$(aws configure list | awk -F: '/region/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}')
@@ -74,11 +64,6 @@ else
   echo "❌ AWS SSO에 로그인되어 있지 않습니다!"
   exit 1
 fi
-
-# 최신버전 Update
-# git stash --include-untracked >/dev/null 2>&1
-# git pull >/dev/null 2>&1
-# git stash pop stash@{0} >/dev/null 2>&1
 
 if [[ $region_value == "ap-northeast-2" ]]; then
   # AWS 계정 ID 확인 및 instance alias 자동 설정
@@ -110,7 +95,8 @@ get_instance_id_from_alias() {
 
 convert_to_millis() {
   date_str="$1"
-  date -j -f "%Y-%m-%dT%H:%M:%S%z" "${date_str}" "+%s000"
+  # Docker(Linux) 환경에서는 date 명령어 옵션이 다름
+  date -d "${date_str}" "+%s000" 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S%z" "${date_str}" "+%s000"
 }
 
 # History 목록 생성 함수
@@ -122,7 +108,8 @@ list_history_files() {
       filename=$(basename "$file")
       contact_id=${filename#$env-main_flow_}
       contact_id=${contact_id%.dot}
-      created_time=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$file")  # macOS용
+      # Linux/Docker 환경 호환 (stat 명령어 차이)
+      created_time=$(stat -c "%y" "$file" 2>/dev/null | cut -d'.' -f1 || stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$file")
       output+="$contact_id $created_time"$'\n'
   done < <(find "$VENV_DIR" -type f -name "$env-main_flow_*.dot")
 
@@ -159,8 +146,12 @@ list_contact_flow_lambda_error_list() {
   # 실행 결과 저장
   RESULTS=""
 
+  # Linux/Docker 환경에서 date 명령어 사용 (macOS의 -v 대신 -d 사용)
+  start_time=$(date -d "48 hours ago" "+%s000" 2>/dev/null || date -v-48H "+%s000")
+  end_time=$(date "+%s000")
+
   for LOG_GROUP in "${LOG_GROUPS[@]}"; do
-      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
+      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $start_time --end-time $end_time --region $region --query 'queryId' --output text)
 
       # 쿼리 실행 후 대기
       while true; do
@@ -176,7 +167,7 @@ list_contact_flow_lambda_error_list() {
 
       # ContactId 추출
       CONTACT_INFO=$(echo "$RESPONSE" | jq -r '
-          .results[] | 
+          .results[] |
           {
               timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
               message: (map(select(.field == "@message"))[0].value | fromjson)
@@ -202,7 +193,7 @@ list_contact_flow_lambda_error_list() {
               | sort @timestamp desc
               | limit 10000"
 
-              SECOND_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$SECOND_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
+              SECOND_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$SECOND_QUERY" --start-time $start_time --end-time $end_time --region $region --query 'queryId' --output text)
 
               while true; do
                   SECOND_STATUS=$(aws logs get-query-results --query-id "$SECOND_QUERY_ID" --region $region --query 'status' --output text)
@@ -216,7 +207,7 @@ list_contact_flow_lambda_error_list() {
 
               # ContactId 재추출
               SECOND_CONTACT_INFO=$(echo "$SECOND_RESPONSE" | jq -r '
-                  .results[] | 
+                  .results[] |
                   {
                       timestamp: (map(select(.field == "@timestamp"))[0].value // empty),
                       message: (map(select(.field == "@message"))[0].value | fromjson)
@@ -254,10 +245,14 @@ list_contact_flow_lambda_timeout_list() {
       "/aws/lmd/aicc-connect-flow-base/flow-idnv-async-if"
   )
 
-  
+
 
   # 실행 결과 저장
   RESULTS=""
+
+  # Linux/Docker 환경에서 date 명령어 사용
+  start_time=$(date -d "48 hours ago" "+%s000" 2>/dev/null || date -v-48H "+%s000")
+  end_time=$(date "+%s000")
 
   for LOG_GROUP in "${LOG_GROUPS[@]}"; do
 
@@ -274,7 +269,7 @@ list_contact_flow_lambda_timeout_list() {
         | limit 10000"
       fi
 
-      TIMEOUT_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$TIMEOUT_QUERY" --start-time $(date -v-48H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
+      TIMEOUT_QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$TIMEOUT_QUERY" --start-time $start_time --end-time $end_time --region $region --query 'queryId' --output text)
 
       # 쿼리 실행 후 대기
       while true; do
@@ -308,6 +303,10 @@ search_contacts(){
   # 실행 결과 저장
   RESULTS=""
 
+  # Linux/Docker 환경에서 date 명령어 사용
+  start_time=$(date -d "144 hours ago" "+%s000" 2>/dev/null || date -v-144H "+%s000")
+  end_time=$(date "+%s000")
+
   for LOG_GROUP in "${LOG_GROUPS[@]}"; do
       if [[ ! -z "$dnis" ]]; then
         QUERY="fields @timestamp, @message, @logStream, @log
@@ -321,7 +320,7 @@ search_contacts(){
         | limit 10000"
       fi
 
-      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $(date -v-144H "+%s000") --end-time $(date "+%s000") --region $region --query 'queryId' --output text)
+      QUERY_ID=$(aws logs start-query --log-group-name "$LOG_GROUP" --query-string "$QUERY" --start-time $start_time --end-time $end_time --region $region --query 'queryId' --output text)
 
       # 쿼리 실행 후 대기
       while true; do
@@ -341,7 +340,7 @@ search_contacts(){
             message: (map(select(.field == "@message"))[0].value | fromjson)
           } | select(.message.ContactId) | "\(.message.ContactId) \(.timestamp)"
         '| sort -k2 -r | awk '!seen[$1]++'
-      
+
   done
 
 }
@@ -457,7 +456,7 @@ case $search_option in
     elif [[ "$customer_info" =~ ^[a-zA-Z0-9]{12}$ ]]; then
       gsi="gsi9"
       key_name="gsi9Pk"
-      key_value="contact#skypassNumber#$customer_info" 
+      key_value="contact#skypassNumber#$customer_info"
     else
       echo "❌ 오류: 유효한 Customer Profile ID (32자리) 또는 E.164 형식의 Phone Number 또는 SkyPass Number 12자리를 입력하세요."
       exit 1
@@ -486,7 +485,7 @@ case $search_option in
       fi
 
       selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
-    else 
+    else
       echo "⏳ 탐색 중 입니다..."
       contact_ids=$(list_contact_flow_lambda_error_list)
 
@@ -522,7 +521,7 @@ esac
 
 if [ -z "$selected_contact_id" ]; then
 
-  # contact id 리스트를 가져올 때 방식에 차이가 있을 수 있음 
+  # contact id 리스트를 가져올 때 방식에 차이가 있을 수 있음
   contact_ids=$(
         aws dynamodb query \
           --table-name "aicc-$env-ddb-agent-contact" \
@@ -566,7 +565,7 @@ else
   # Common Contact Center Info
   channel=$(echo "$describe_contact" | jq -r '.Contact.Channel')
   agent_info=$(echo "$describe_contact" | jq '.Contact.AgentInfo')
-  
+
   initiation_timestamp=$(echo "$describe_contact" | jq -r '.Contact.InitiationTimestamp')
   disconnect_timestamp=$(echo "$describe_contact" | jq -r '.Contact.DisconnectTimestamp')
   last_update_timestamp=$(echo "$describe_contact" | jq -r '.Contact.LastUpdateTimestamp')
@@ -615,41 +614,41 @@ else
   echo -e "\n$BORDER"
   format_line "📞 **Contact Details**"
   echo -e "$BORDER"
- 
+
 
   if [[ ! -z "$selected_contact_id" && $selected_contact_id != "null" ]]; then
     format_line "🆔 Contact Id: $selected_contact_id"
   fi
-    
+
   if [[ ! -z "$channel" && $channel != "null" ]]; then
     format_line "📡 Channel: $channel ( $contact_direction )"
   fi
-    
+
   if [[ ! -z "$service_number" && $service_number != "null" ]]; then
     format_line "📟 Service Number: $service_number"
   fi
-    
+
   if [[ ! -z "$customer_number" && $customer_number != "null" ]]; then
     format_line "☎️ Customer Phone Number: $customer_number"
   fi
-    
+
   if [[ ! -z "$customer_skypass_number" && $customer_skypass_number != "null" ]]; then
     format_line "✈️ Customer Skypass Number: $customer_skypass_number"
   fi
-    
+
   if [[ ! -z "$customer_profile_id" && $customer_profile_id != "null" ]]; then
     format_line "👤 Customer Profile Id: $customer_profile_id"
   fi
-    
+
   if [[ ! -z "$center" && $center != "null" ]]; then
     format_line "🏢 Center: $center"
   fi
-    
+
   if [[ ! -z "$queue_id" && $queue_id != "null" ]]; then
     format_line "📋 Queue: $queue_name"
     format_line "          (ID: $queue_id)"
   fi
-    
+
   if [[ ! -z "$agent_id" && $agent_id != "null" ]]; then
     format_line "👤 Agent: $agent_name "
     if [[ ! -z "$agent_device_info" && $agent_device_info != "null" ]]; then
@@ -661,23 +660,23 @@ else
   if [[ ! -z "$enqueue_timestamp" && $enqueue_timestamp != "null" ]]; then
     format_line "🕒 Enqueue Timestamp: $enqueue_timestamp"
   fi
-    
+
   if [[ ! -z "$connected_timestamp" && $connected_timestamp != "null" ]]; then
     format_line "🕒 Connected Agent Timestamp: $connected_timestamp"
   fi
-    
+
   if [[ ! -z "$initiation_timestamp" && $initiation_timestamp != "null" ]]; then
     format_line "🕒 Initiation Timestamp: $initiation_timestamp"
   fi
-    
+
   if [[ ! -z "$disconnect_timestamp" && $disconnect_timestamp != "null" ]]; then
     format_line "🕒 Disconnect Timestamp: $disconnect_timestamp"
   fi
-    
+
   if [[ ! -z "$last_update_timestamp" && $last_update_timestamp != "null" ]]; then
     format_line "🕒 Last Update Timestamp: $last_update_timestamp"
   fi
-    
+
   if [[ ! -z "$contact_flow" && $contact_flow != "null" ]]; then
     format_line "🔀 Flow: $contact_flow"
   fi
@@ -693,7 +692,7 @@ else
   fi
   echo -e "$BORDER"
 fi
- 
+
 
 
 # Python 스크립트 실행

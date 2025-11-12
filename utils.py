@@ -1,75 +1,123 @@
-import re
-import sys
-import json
-import time
-import pytz
-import boto3
-import os
-import subprocess
-from dateutil import parser
+"""
+AWS Connect Contact Flow 유틸리티 모듈
+
+Contact Flow 로그 처리, 노드 생성, Xray 추적 등
+Graphviz 시각화를 위한 유틸리티 함수들을 제공합니다.
+"""
 import bisect
-from datetime import datetime, timedelta
+import json
+import os
+import re
+import subprocess
+import sys
+import time
 from collections import defaultdict
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Tuple, Set
 
-from describe_flow import get_contact_flow, \
-                        get_contact_flow_module
+import boto3
+import pytz
+from dateutil import parser
 
+from describe_flow import get_contact_flow, get_contact_flow_module
 from fetch_data_from_s3 import decompress_datadog_logs
 
-# 그래프에서 한 줄에 표시할 노드 수 
-COLS_NUM = 5
+
+# Constants
+COLS_NUM = 5  # 그래프에서 한 줄에 표시할 노드 수
+OUTPUT_DIR = './virtual_env'
 
 # 그래프에서 제외할 Flow Name
-EXCEPT_CONTACT_FLOW_NAME = [
-    '99_MOD_Dummy', 'InvokeFlowModule'
-]
-def check_json_file_exists(directory):
+EXCEPT_CONTACT_FLOW_NAME = ['99_MOD_Dummy', 'InvokeFlowModule']
+def check_json_file_exists(directory: str) -> bool:
+    """
+    디렉토리에 JSON 파일이 존재하는지 확인
+
+    Args:
+        directory: 확인할 디렉토리 경로
+
+    Returns:
+        JSON 파일 존재 여부
+    """
     try:
         for filename in os.listdir(directory):
             if filename.endswith('.json'):
                 return True
         return False
-    except Exception:
+    except (OSError, IOError):
         return False
 
-# Util
-def generate_node_ids(logs,sort=True):
+
+def generate_node_ids(logs: List[Dict[str, Any]], sort: bool = True) -> List[Dict[str, Any]]:
+    """
+    로그에 node_id를 생성하여 할당
+
+    Args:
+        logs: Contact Flow 로그 리스트
+        sort: Timestamp 기준 정렬 여부
+
+    Returns:
+        node_id가 추가된 로그 리스트
+    """
     if sort:
-        logs.sort(key=lambda log: log['Timestamp'])  # timestamp 기준 정렬
+        logs.sort(key=lambda log: log['Timestamp'])
+
     flow_indices = defaultdict(int)
-    last_flow_name = None  # 마지막 유효한 Entry 노드의 flow_name 저장
-    last_node_id = None  # 마지막 Entry 기반 node_id 저장
+    last_flow_name = None
+    last_node_id = None
 
     for log in logs:
         flow_name = log['ContactFlowName']
 
+        # MOD_ 또는 이전과 동일한 Entry라면 같은 node_id 유지
         if last_flow_name and ("MOD_" in flow_name or flow_name == last_flow_name):
-            # MOD_ 또는 이전과 동일한 Entry라면 같은 node_id 유지
             log['node_id'] = last_node_id
         else:
             # 새로운 Entry 노드가 등장하면 새로운 node_id 할당
             flow_indices[flow_name] += 1
             last_node_id = f"{flow_name}_{flow_indices[flow_name]}"
             log['node_id'] = last_node_id
-            last_flow_name = flow_name  # 새로운 Entry로 업데이트
+            last_flow_name = flow_name
 
     return logs
 
-def valid_uuid(uuid):
+
+def valid_uuid(uuid: str) -> bool:
+    """
+    UUID 형식 유효성 검증
+
+    Args:
+        uuid: 검증할 UUID 문자열
+
+    Returns:
+        유효한 UUID 여부
+    """
     if not uuid:
         return False
-    regex = re.compile('^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}', re.I)
-    match = regex.match(uuid)
-    return bool(match)
 
-def sanitize_label(label):
+    uuid_pattern = re.compile(
+        r'^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}',
+        re.I
+    )
+    return bool(uuid_pattern.match(uuid))
+
+
+def sanitize_label(label: str) -> str:
     """
-    DOT 그래프에서 사용할 수 없는 제어 문자 제거.
+    DOT 그래프에서 사용할 수 없는 제어 문자 제거
+
+    Args:
+        label: 정제할 라벨 문자열
+
+    Returns:
+        정제된 라벨 문자열
     """
     if not label:
         return ""
-        
-    label = label.replace('&','n')
+
+    # & 문자를 'n'으로 치환
+    label = label.replace('&', 'n')
+
     # 유효하지 않은 ASCII 제어 문자 제거 (0x00~0x1F 및 0x7F)
     return re.sub(r'[\x00-\x1F\x7F]', '', label)
 
@@ -142,7 +190,7 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
             return datadog_logs, datadog_lambda_logs, contact_flow_ids
         else:
             print(f"Error : {e}")
-        sys.exit(1)
+        # sys.exit(1)
 
     query_id = start_query_response["queryId"]
 
@@ -166,18 +214,26 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
                     contact_flow_ids.add(json_value.get("ContactFlowId"))
 
                 if "BotAliasArn" in str(json_value):
-                    if env != "test":
-                        lambda_log_groups.add(f"/aws/lex/aicc/{get_bot_name_from_alias_arn(json_value.get("Parameters")["BotAliasArn"])}")
+                    if env == "test":
+                        lambda_log_groups.add("/aws/lex/TMSSWIWT4K")
+                    elif env == "qic":
+                        lambda_log_groups.add("/aws/lex/QicBot")
+                        lambda_log_groups.add("/aws/lmd/aicc-voicebot-app/qic-apigateway-caller")
+                        lambda_log_groups.add("/aws/lmd/aicc-voicebot-app/qic-create-session")
                         lambda_log_groups.add("/aws/lmd/aicc-voicebot-app/lex-hook-func")
                     else:
-                        lambda_log_groups.add("/aws/lex/TMSSWIWT4K")
+                        lambda_log_groups.add(f"/aws/lex/aicc/{get_bot_name_from_alias_arn(json_value.get("Parameters")["BotAliasArn"])}")
+                        lambda_log_groups.add("/aws/lmd/aicc-voicebot-app/lex-hook-func")
+                        
+
+
 
 
                 # Lambda 함수 수집 
                 if json_value.get("ContactFlowModuleType") == "InvokeExternalResource":
                     function_arn = json_value.get("Parameters")["FunctionArn"]
                     
-
+                
 
                     lambda_log_groups.add(get_lambda_log_groups_from_arn(function_arn, env))
                     if "idnv-common-if" in function_arn: # common-if 예외처리 
@@ -215,7 +271,12 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
 
     for lambda_log_group in lambda_log_groups:
         function_name = lambda_log_group.split("/")[-1]
-        lambda_logs[function_name] = fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
+        
+        if env == "qic": # TO-do : Rollback after poc
+            lambda_logs[function_name] = fetch_lambda_logs(contact_id, initiation_timestamp, "ap-northeast-2" if lambda_log_group == "/aws/lmd/aicc-voicebot-app/lex-hook-func" \
+             or lambda_log_group == "/aws/lmd/aicc-voicebot-app/qic-1a-caller" else "us-east-1", lambda_log_group)
+        else:
+            lambda_logs[function_name] = fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
 
     try:
         if len(lambda_logs['flow-idnv-async-if']) > 0:
@@ -227,17 +288,26 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
 
 # flow-internal-handler
 def get_func_name(arn, env):
-    return "-".join(arn.split(":")[6].split("-")[3:]) \
-        if env != "test" \
+
+    result = "-".join(arn.split(":")[6].split("-")[3:]) \
+        if env != "test" and env != "qic" \
         else arn.split(":")[-1]
+    
+    if result == "aicc-dev-lmd-qic-create-session":
+        return "aicc-voicebot-app/qic-create-session"
+    else:
+        return result
 
 def get_lambda_log_groups_from_arn(arn, env):
-
+    if arn.split(":")[-1] == "aicc-dev-lmd-qic-create-session":
+        return "/aws/lmd/aicc-voicebot-app/qic-create-session"
+    
     return "/aws/lmd/aicc-connect-flow-base/"+get_func_name(arn, env) \
-        if env != "test" \
+        if env != "test" and env != "qic" \
         else "/aws/lambda/"+get_func_name(arn, env)
 
 def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
+
 
     cloudwatch_client = boto3.client("logs", region_name=region)
 
@@ -265,7 +335,10 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
 
     # End Time
     end_time = initiation_time + timedelta(hours=12)
-
+    
+    if "qic-apigateway-caller" in log_group:
+        log_group = "/aws/lmd/aicc-voicebot-app/qic-apigateway-caller" #/aws/lmd/aicc-voicebot-app/qic-apigateway-caller
+    print(f'fetch_lambda_logs : {log_group}, {region}')
     try:
         start_query_response = cloudwatch_client.start_query(
             logGroupName=log_group,
@@ -278,7 +351,8 @@ def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
             print(f"Error : {e}, 1일 전부터 발생한 ContactId 입력 후 조회 가능합니다.")
         else:
             print(f"Error : {e}")
-        sys.exit(1)
+        # return []
+            sys.exit(1)
 
     query_id = start_query_response["queryId"]
 

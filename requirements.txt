@@ -1,9 +1,11 @@
 boto3
 graphviz
 datetime
-pytz
 pycairo
 PyGObject
+pytz
 packaging
 numpy
 fzf.py
+flask
+flask-cors
