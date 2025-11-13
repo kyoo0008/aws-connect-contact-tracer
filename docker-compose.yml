@@ -26,6 +26,9 @@ services:
       # Python 환경 변수
       - PYTHONUNBUFFERED=1
 
+      - GDK_BACKEND=broadway
+      - BROADWAY_DISPLAY=:5
+
     # 웹 서버 포트 노출 (호스트 포트는 랜덤 할당)
     ports:
       - "5000"

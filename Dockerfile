@@ -38,6 +38,9 @@ COPY . .
 # 가상환경 디렉토리 생성 (이미지 빌드 시에는 생성하지 않음)
 # RUN mkdir -p virtual_env
 
+RUN broadwayd :5 &
+RUN sleep 5
+
 # 스크립트 실행 권한 부여
 RUN chmod +x docker_web_start.sh
 

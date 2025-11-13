@@ -9,18 +9,18 @@ import os
 from typing import Dict, Any
 
 # GUI 모드 감지 - DISPLAY 환경 변수와 --headless 플래그 확인
-USE_GUI = os.environ.get('DISPLAY') and '--headless' not in sys.argv
+# USE_GUI = os.environ.get('DISPLAY') and '--headless' not in sys.argv
 
-if USE_GUI:
-    try:
-        import gi
-        gi.require_version('Gtk', '3.0')
-        from gi.repository import Gtk
-        from xdot.ui.window import MainDotWindow
-    except (ImportError, ValueError) as e:
-        print(f"Warning: GUI 모드를 사용할 수 없습니다: {e}")
-        print("헤드리스 모드로 전환합니다.")
-        USE_GUI = False
+# if USE_GUI:
+    # try:
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
+from xdot.ui.window import MainDotWindow
+    # except (ImportError, ValueError) as e:
+    #     print(f"Warning: GUI 모드를 사용할 수 없습니다: {e}")
+    #     print("헤드리스 모드로 전환합니다.")
+    #     USE_GUI = False
 
 from dot_builder import build_main_contacts
 
@@ -77,12 +77,12 @@ def save_graph(dot, associated_contacts: Dict[str, Any], output_file: str) -> No
     except Exception as e:
         print(f"Warning: SVG 파일 생성 실패: {e}")
 
-    if USE_GUI:
-        window = MainDotWindow(f"{file_path}.{OUTPUT_FORMAT}", associated_contacts)
-        window.connect('delete-event', Gtk.main_quit)
-        Gtk.main()
-    else:
-        print(f"헤드리스 모드: GUI를 실행하지 않습니다. 파일은 {file_path}.{OUTPUT_FORMAT}에 저장되었습니다.")
+    # if USE_GUI:
+    window = MainDotWindow(f"{file_path}.{OUTPUT_FORMAT}", associated_contacts)
+    window.connect('delete-event', Gtk.main_quit)
+    Gtk.main()
+    # else:
+    #     print(f"헤드리스 모드: GUI를 실행하지 않습니다. 파일은 {file_path}.{OUTPUT_FORMAT}에 저장되었습니다.")
 
 
 def set_history_window(contact_id: str, associated_contacts: Dict[str, Any],
@@ -98,12 +98,10 @@ def set_history_window(contact_id: str, associated_contacts: Dict[str, Any],
     output_file = f"{file_prefix}{contact_id}"
     file_path = f"{OUTPUT_DIR}/{output_file}"
 
-    if USE_GUI:
-        window = MainDotWindow(f"{file_path}.{OUTPUT_FORMAT}", associated_contacts)
-        window.connect('delete-event', Gtk.main_quit)
-        Gtk.main()
-    else:
-        print(f"헤드리스 모드: GUI를 실행하지 않습니다. 파일은 {file_path}.{OUTPUT_FORMAT}에 있습니다.")
+
+    window = MainDotWindow(f"{file_path}.{OUTPUT_FORMAT}", associated_contacts)
+    window.connect('delete-event', Gtk.main_quit)
+    Gtk.main()
 
 
 def main() -> None:
