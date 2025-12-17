@@ -154,13 +154,15 @@ def get_node_text_by_module_type(module_type,log,block_id):
         node_footer = "Results : " + replaced_arn_log.get('Results')
     elif module_type == "InvokeExternalResource" or module_type == "InvokeLambdaFunction":
                 
-        # Param 존재 시 
-        if param_json.get("Parameters"): 
+        # Param 존재 시
+        if param_json.get("Parameters"):
             parameters = param_json.get("Parameters")
             for key in parameters:
                 parameter_attr = get_comparison_value(log.get("ContactFlowId"),block_id,"LambdaInvocationAttributes",False)
-                
-                node_text += f"{wrap_text(f"{key} = {parameters[key]}",is_just_cut=True,max_length=25)} {"("+parameter_attr.get(key)+")" if "$" in parameter_attr.get(key) else ""}\n"
+
+                attr_value = parameter_attr.get(key) if parameter_attr else None
+                attr_suffix = f"({attr_value})" if attr_value and "$" in attr_value else ""
+                node_text += f"{wrap_text(f"{key} = {parameters[key]}",is_just_cut=True,max_length=25)} {attr_suffix}\n"
 
         if replaced_arn_log.get("ExternalResults"):
             node_footer = "ExternalResults : " + json.dumps(replaced_arn_log.get("ExternalResults",""), indent=2, ensure_ascii=False)
