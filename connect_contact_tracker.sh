@@ -4,12 +4,19 @@
 
 ###
 # 현재 Git Repo의 Flow JSON 파일을 Local에서 분석하여, Terraform HCL 코드로 IaC 작성에 도움을 줄 수 있는 예시코드를 생성하는 Python 스크립트를 실행
+# AWS Connect Contact Tracer - Contact Flow 추적 및 시각화 도구
+# 주요 기능:
+#   - Contact ID, Customer, Agent 등 다양한 검색 기준으로 Contact Flow 조회
+#   - CloudWatch Logs에서 Lambda 에러 및 Timeout 추적
+#   - Contact Flow 상세 정보 표시 및 Python 스크립트로 시각화
 #
 
+# 환경 변수 설정
 VENV_DIR="virtual_env"
 # PYTHON_SCRIPT_FILE="test.py"
 PYTHON_SCRIPT_FILE="main.py"
 REQUIREMENTS_FILE="requirements.txt"
+# 정규표현식 패턴 정의
 EMAIL_REGEX="^[a-zA-Z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-zA-Z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\$"
 UUID_REGEX=^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$
 HANGUL_NAME_REGEX="^[가-힣]{2,}[a-zA-Z]?$"  # 한글 두 글자 이상 + 선택적 영문자
@@ -17,12 +24,13 @@ ENG_NAME_REGEX="^[a-zA-Z ]+"
 cols_num=5
 
 
-# Insights 쿼리
+# CloudWatch Logs Insights 쿼리 - ERROR 레벨 로그 검색
 QUERY='fields @timestamp, @message, @logStream, @log
 | filter @message like "\"level\":\"ERROR\""
 | sort @timestamp desc
 | limit 10000'
 
+# Python 가상환경 설정
 if [ ! -d "$VENV_DIR" ]; then
   python3 -m venv "$VENV_DIR"
   echo -e "\n\"$VENV_DIR\" Python 가상환경이 생성되었습니다.\n"
@@ -55,8 +63,8 @@ if ! brew list gtk+3 &> /dev/null; then
     fi
 fi
 # AWS Profile 값 확인
-profile_value=$(aws configure list | awk '/profile/ {print $2}')
-region_value=$(aws configure list | awk '/region/ {print $2}')
+profile_value=$(aws configure list | awk '/profile/ {print $3}')
+region_value=$(aws configure list | awk '/region/ {print $3}')
 if [[ "$profile_value" == "<not" ]]; then
   echo "⚠️  AWS CLI에서 Profile이 설정되지 않았습니다!"
   echo "👉 'aws configure set profile <your-profile>' 또는 환경 변수 설정을 확인하세요."
@@ -102,18 +110,20 @@ else
   esac
 fi
 
+# Instance ID를 Alias로부터 가져오는 함수
 get_instance_id_from_alias() {
   local instance_alias="$1"
   local instance_id=$(aws connect list-instances --query "InstanceSummaryList[?InstanceAlias=='$instance_alias'].Id" --output text)
   echo "$instance_id"
 }
 
+# ISO 8601 날짜를 밀리초로 변환하는 함수
 convert_to_millis() {
   date_str="$1"
   date -j -f "%Y-%m-%dT%H:%M:%S%z" "${date_str}" "+%s000"
 }
 
-# History 목록 생성 함수
+# 저장된 Contact Flow History 목록을 생성하는 함수
 list_history_files() {
   output=""
 
@@ -130,6 +140,8 @@ list_history_files() {
   echo -n "$output" | sort -k2,3r
 }
 
+# Lambda 함수 에러 로그를 검색하는 함수
+# CloudWatch Logs에서 ERROR 레벨 로그를 찾아 Contact ID를 추출
 list_contact_flow_lambda_error_list() {
   # 로그 그룹 배열
   LOG_GROUPS=(
@@ -247,6 +259,8 @@ list_contact_flow_lambda_error_list() {
   done
 }
 
+# Lambda 함수 Timeout 로그를 검색하는 함수
+# Lambda 함수 실행 시 Timeout이 발생한 Contact를 찾아냄
 list_contact_flow_lambda_timeout_list() {
   # 로그 그룹 배열
   LOG_GROUPS=(
@@ -298,6 +312,7 @@ list_contact_flow_lambda_timeout_list() {
   done
 }
 
+# Contact을 DNIS 또는 ContactFlow 이름으로 검색하는 함수
 search_contacts(){
 
     # 로그 그룹 배열
@@ -346,7 +361,9 @@ search_contacts(){
 
 }
 
-# Amazon Connect Instance ID
+# ===================================
+# Amazon Connect Instance 정보 가져오기
+# ===================================
 instance_id=$(get_instance_id_from_alias "$instance_alias")
 if [ -z "$instance_id" ]; then
   echo "❌ 입력한 Alias의 Amazon Connect 인스턴스를 찾을 수 없습니다!"
@@ -356,12 +373,18 @@ else
 fi
 
 
-# fzf를 통한 검색 조건 선택
+# ===================================
+# 사용자 검색 기준 선택 (fzf 인터페이스)
+# ===================================
 search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError\nContactFlow\nDNIS" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (DNIS, ContactFlow, LambdaError, History, Agent, Customer, ContactId):" )
 # search_option=$(echo -e "ContactId\nCustomer\nAgent\nHistory\nLambdaError" | fzf --height 9 --prompt "검색할 기준을 선택하세요 (LambdaError, History, Agent, Customer, ContactId):" )
 
+# ===================================
+# 검색 옵션별 처리 로직
+# ===================================
 case $search_option in
   "ContactFlow")
+    # ContactFlow 이름으로 검색
     echo -e "ContactFlow 명을 입력하세요.(e.g. 대소문자 구분 필요 ex. 05_CustomerQueue)"
 
     read -r -p "❯ " contact_flow
@@ -379,6 +402,7 @@ case $search_option in
     selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "최근 1일간 ContactFlowName 기준으로 조회" | awk '{print $1}')
     ;;
   "History")
+    # 저장된 히스토리에서 검색
     echo "기록된 Contact Flow 목록을 불러옵니다..."
     contact_ids=$(list_history_files)
 
@@ -390,6 +414,7 @@ case $search_option in
     selected_contact_id=$(echo "$contact_ids" | fzf --height 10 --prompt "기록된 Contact 선택" | awk '{print $1}')
     ;;
   "Agent")
+    # 상담사(Agent) 정보로 검색 - UUID, 이름, 이메일 지원
     echo -e "Agent ID, 한글(영문)이름, 또는 Email을 입력하세요:(e.g., 상담사 uuid, 홍길동B, 또는 이메일 형식의 ID)"
     # echo -e "Agent ID 또는 Email 입력 시 빠르게 검색할 수 있습니다."
     read -r -p "❯ " agent_input
@@ -441,6 +466,7 @@ case $search_option in
 
     ;;
   "Customer")
+    # 고객(Customer) 정보로 검색 - Profile ID, 전화번호, Skypass 번호 지원
     echo -e "Customer Profile ID 또는 Phone Number 또는 Skypass Number를 입력하세요(e.g., 32자리 profileId 또는 E.164 포맷 +821012341234 또는 Skypass Number):"
     read -r -p "❯ " customer_info
     echo "입력된 Customer 정보: $customer_info"
@@ -465,6 +491,7 @@ case $search_option in
 
     ;;
   "ContactId")
+    # Contact ID로 직접 검색
     echo "Amazon Connect Contact Id를 입력하세요 (uuid):"
     read -r -p "❯ " selected_contact_id
     if [[ $selected_contact_id =~ $UUID_REGEX ]]; then # uuid
@@ -475,6 +502,7 @@ case $search_option in
     fi
     ;;
   "LambdaError")
+    # Lambda 에러 또는 Timeout으로 검색
     search_option=$(echo -e "Lambda Error\nTimeout" | fzf --height 7 --prompt "검색할 기준을 선택하세요 (Timeout, Lambda Error):" )
     if [[ "$search_option" == "Timeout" ]]; then
       echo "⏳ Timeout 탐색 중 입니다..."
@@ -499,6 +527,7 @@ case $search_option in
     fi
     ;;
   "DNIS")
+    # DNIS (착신번호)로 검색
     echo -e "DNIS를 입력하세요.(e.g. E.164 포맷 ex. +82269269240)"
 
     read -r -p "❯ " dnis
@@ -520,9 +549,12 @@ case $search_option in
     ;;
 esac
 
+  # ===================================
+# DynamoDB에서 Contact ID 조회 (선택되지 않은 경우)
+# ===================================
 if [ -z "$selected_contact_id" ]; then
 
-  # contact id 리스트를 가져올 때 방식에 차이가 있을 수 있음 
+  # DynamoDB GSI를 사용하여 contact id 리스트 조회
   contact_ids=$(
         aws dynamodb query \
           --table-name "aicc-$env-ddb-agent-contact" \
@@ -538,12 +570,16 @@ if [ -z "$selected_contact_id" ]; then
   selected_contact_id=$(echo "$contact_ids" | tr '\t' '\n' | fzf --height 20 --prompt "최근 진행한 Contact ID 선택" | awk '{print $1}')
 fi
 
+# ===================================
+# Contact 상세 정보 조회 및 출력
+# ===================================
 if [ -z "$selected_contact_id" ]; then
   echo "❌ Contact ID가 선택되지 않았습니다."
   exit 1
 else
   echo "✅ 선택된 Contact ID: $selected_contact_id"
-  # Extract information using AWS CLI
+
+  # AWS CLI를 사용하여 Contact 정보 조회
   describe_contact=$(aws connect describe-contact --contact-id "$selected_contact_id" --instance-id "$instance_id")
   contact_attributes=$(aws connect get-contact-attributes --initial-contact-id $selected_contact_id --instance-id $instance_id )
   associated_contacts=$(aws connect list-associated-contacts --instance-id $instance_id --contact-id $selected_contact_id)
@@ -598,20 +634,24 @@ else
   echo -e "Describe Contact : \n$(echo $describe_contact  | jq .)"
 
 
+  # ===================================
+  # Contact 정보 포맷팅 및 출력
+  # ===================================
   GREEN="\033[32m"
   RESET="\033[0m"
   BORDER="${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
-  # Calculate max width for alignment
+  # 출력 정렬을 위한 최대 너비 계산
   MAX_WIDTH=66  # 조정 가능
 
-  # Function to format output with padding
+  # 패딩을 포함한 출력 포맷 함수
   format_line() {
       local text="$1"
       local padding=$((MAX_WIDTH - ${#text}))
       printf " %s %*s \n" "$text" "$padding" ""
   }
-  # Display Contact Details with Borders
+
+  # Contact 상세 정보를 경계선과 함께 출력
   echo -e "\n$BORDER"
   format_line "📞 **Contact Details**"
   echo -e "$BORDER"
@@ -693,12 +733,13 @@ else
   fi
   echo -e "$BORDER"
 fi
- 
 
 
-# Python 스크립트 실행
+# ===================================
+# Python 스크립트 실행하여 Contact Flow 시각화
+# ===================================
 echo -e '\n'
 python $PYTHON_SCRIPT_FILE "$instance_alias" "$instance_id" "$selected_contact_id" "$region" "$initiation_timestamp" "$associated_contacts" "$search_option" "$env"
 
-# 가상환경 비활성화
+# Python 가상환경 비활성화
 deactivate
