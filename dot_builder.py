@@ -1299,8 +1299,9 @@ def build_main_contacts(selected_contact_id,associated_contacts,initiation_times
         # Graph 생성 시작
         contact_graph, nodes = build_main_flow(logs, lambda_logs, contact_id, env)
 
-        # Transcript Node 생성 
-        transcript_nodes = build_transcript_dot(env,contact_id,region,instance_id)
+        # Transcript Node 생성 (disable)
+        # transcript_nodes = build_transcript_dot(env,contact_id,region,instance_id)
+        transcript_nodes = []
 
         if len(transcript_nodes) > 0:
             contact_graph.node(
