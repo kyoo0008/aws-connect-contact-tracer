@@ -565,7 +565,9 @@ class FindMenuToolAction(Gtk.Action):
     __gtype_name__ = "FindMenuToolAction"
 
     def do_create_tool_item(self):
-        return Gtk.ToolItem()
+        item = Gtk.ToolItem()
+        self._tool_item_ref = item
+        return item
 
 
 class DotWindow(Gtk.Window):
@@ -685,10 +687,10 @@ class DotWindow(Gtk.Window):
         self.set_focus(self.dotwidget)
 
         # Add Find text search
-        find_toolitem = uimanager.get_widget('/ToolBar/Find')
+        self.find_toolitem = uimanager.get_widget('/ToolBar/Find')
         self.textentry = Gtk.Entry()
         self.textentry.set_icon_from_stock(0, Gtk.STOCK_FIND)
-        find_toolitem.add(self.textentry)
+        self.find_toolitem.add(self.textentry)
 
 
         self.textentry.set_activates_default(True)
@@ -696,14 +698,16 @@ class DotWindow(Gtk.Window):
         self.textentry.connect("activate", self.textentry_activate, self.textentry);
         self.textentry.connect("changed", self.textentry_changed, self.textentry);
 
-        uimanager.get_widget('/ToolBar/FindNextSeparator').set_draw(False)
-        uimanager.get_widget('/ToolBar/FindStatusSeparator').set_draw(False)
+        self.find_next_separator = uimanager.get_widget('/ToolBar/FindNextSeparator')
+        self.find_next_separator.set_draw(False)
+        self.find_status_separator = uimanager.get_widget('/ToolBar/FindStatusSeparator')
+        self.find_status_separator.set_draw(False)
         self.find_next_toolitem = uimanager.get_widget('/ToolBar/FindNext')
         self.find_next_toolitem.set_sensitive(False)
 
         self.find_count = Gtk.Label()
-        findstatus_toolitem = uimanager.get_widget('/ToolBar/FindStatus')
-        findstatus_toolitem.add(self.find_count)
+        self.findstatus_toolitem = uimanager.get_widget('/ToolBar/FindStatus')
+        self.findstatus_toolitem.add(self.find_count)
 
         self.show_all()
 

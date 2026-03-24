@@ -1,4 +1,5 @@
 virtual_env/
+virtual_env_bak/
 *.pyc
 __pycache__/
 .idea/

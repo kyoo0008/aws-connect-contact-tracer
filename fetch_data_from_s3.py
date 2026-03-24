@@ -1,27 +1,16 @@
-import boto3
 import gzip
 import io
 import json
-import os
-import sys
-import csv
 import re
-import pytz
-import datetime
 import botocore
+import boto3
+import pytz
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 
 
 log_pattern = re.compile(r"\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}")
-
-
-
-output_dir = './s3/'  # 로컬에 저장할 출력 디렉토리
-
-contact_ids = set()
-file_names = set()
 
 
 
@@ -238,14 +227,5 @@ def decompress_datadog_logs(env, contact_id, instance_id, region):
             print(f"{lambda_output_json_path} saved!!!")
 
     return logs, lambda_logs
-
-    
-def single_int_to_str(i):
-    return "0"+str(i) if len(str(i))==1 else str(i)
-
-
-
-# S3 경로에서 파일 다운로드 및 처리
-# decompress_datadog_logs(bucket_name, contact_id)
 
 

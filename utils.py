@@ -74,11 +74,10 @@ def sanitize_label(label):
     return re.sub(r'[\x00-\x1F\x7F]', '', label)
 
 def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instance_id):
-    cloudwatch_client = boto3.client("logs", region_name=region)
-
     """
     CloudWatch Logs에서 ContactId에 해당하는 로그를 가져옵니다.
     """
+    cloudwatch_client = boto3.client("logs", region_name=region)
     query = f"""
         fields @timestamp, @message
         | filter ContactId = \"{contact_id}\"
@@ -213,15 +212,24 @@ def fetch_logs(contact_id, initiation_timestamp, region, log_group, env, instanc
 
     lambda_logs = {}
 
-    for lambda_log_group in lambda_log_groups:
-        function_name = lambda_log_group.split("/")[-1]
-        lambda_logs[function_name] = fetch_lambda_logs(contact_id, initiation_timestamp, region, lambda_log_group)
+    # Lambda 로그를 병렬로 가져오기
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {
+            executor.submit(fetch_lambda_logs, contact_id, initiation_timestamp, region, lg): lg.split("/")[-1]
+            for lg in lambda_log_groups
+        }
+        for future in as_completed(futures):
+            function_name = futures[future]
+            try:
+                lambda_logs[function_name] = future.result()
+            except Exception as e:
+                print(f"Error fetching lambda logs for {function_name}: {e}")
+                lambda_logs[function_name] = []
 
-    try:
-        if len(lambda_logs['flow-idnv-async-if']) > 0:
-            lambda_logs['flow-idnv-common-if'] += lambda_logs['flow-idnv-async-if']
-    except Exception as e:
-        print('')
+    async_logs = lambda_logs.get('flow-idnv-async-if', [])
+    if async_logs:
+        lambda_logs['flow-idnv-common-if'] = lambda_logs.get('flow-idnv-common-if', []) + async_logs
 
     return logs, lambda_logs, contact_flow_ids
 
@@ -238,12 +246,10 @@ def get_lambda_log_groups_from_arn(arn, env):
         else "/aws/lambda/"+get_func_name(arn, env)
 
 def fetch_lambda_logs(contact_id, initiation_timestamp, region, log_group):
-
+    """
+    CloudWatch Logs에서 ContactId에 해당하는 Lambda 로그를 가져옵니다.
+    """
     cloudwatch_client = boto3.client("logs", region_name=region)
-
-    """
-    CloudWatch Logs에서 ContactId에 해당하는 로그를 가져옵니다.
-    """
 
     if "/aws/lex/" not in log_group:
         query = f"""
@@ -329,25 +335,16 @@ def get_xray_trace(trace_id, region):
     try:
         data = json.loads(result.stdout)
 
-        with open(f"./virtual_env/batch_xray_{trace_id}.json","w",encoding="utf-8") as f:
-            # json.loads(segment["Document"])
-            traces = [
-                json.loads(segment["Document"])
-                for trace in data.get("Traces", [])
-                for segment in trace.get("Segments", [])
-                # if "Document" in segment and "DynamoDB" in json.loads(segment["Document"]).get("name", "")
-            ]
-            json.dump(traces, f, indent=2, ensure_ascii=False)
-            f.close()
-
-        
         traces = [
             json.loads(segment["Document"])
             for trace in data.get("Traces", [])
             for segment in trace.get("Segments", [])
-            if "Document" in segment 
-            # and "DynamoDB" in json.loads(segment["Document"]).get("name", "")
+            if "Document" in segment
         ]
+
+        with open(f"./virtual_env/batch_xray_{trace_id}.json", "w", encoding="utf-8") as f:
+            json.dump(traces, f, indent=2, ensure_ascii=False)
+
         return traces
     except json.JSONDecodeError:
         return {"error": "Invalid JSON response from AWS CLI"}
@@ -504,15 +501,4 @@ def find_lex_xray_timestamp(lex_entry,hook_logs):
     if candidates:
         closest_trace_id = min(candidates, key=lambda x: x[0])[1]
         return closest_trace_id
-    else:
-        return ""
-
-    
-    #     results.append({
-    #         "lex_timestamp": lex_time.isoformat(),
-    #         "closest_xray_trace_id": closest_trace_id
-    #     })
-
-    # # 결과 출력
-    # for r in results:
-    #     print(f"Lex Time: {r['lex_timestamp']} -> Closest X-Ray Trace ID: {r['closest_xray_trace_id']}")
+    return ""
