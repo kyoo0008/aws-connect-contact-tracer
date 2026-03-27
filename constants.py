@@ -14,6 +14,9 @@ DUP_CONTACT_FLOW_MODULE_TYPE = ['SetAttributes', 'SetFlowAttributes']
 # 생략 Flow Block
 OMIT_CONTACT_FLOW_MODULE_TYPE = ['InvokeFlowModule']
 
+# 순차적으로 뭉쳐 하나의 노드로 표시할 Contact Flow Names
+GROUPED_CONTACT_FLOW_NAMES = ['06_AgentWhisper', '06_CustomerWhisper', '06_AgentHold', '06_CustomerHold', '06_AgentWhisper_Transfer','06_CustomerWhisper_Transfer','06_AgentHold_Transfer','06_CustomerHold_Transfer']
+
 # Associated Contact 조회 여부
 # True : 여러 관련된 Contact 조회, False : 입력된 하나의 Contact만 조회
 ASSOCIATED_CONTACTS_FLAG = True

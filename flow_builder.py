@@ -152,8 +152,10 @@ def add_block_nodes(module_type, log, is_error, dot, nodes, node_id, lambda_logs
     return dot, nodes, error_count
 
 
-def process_sub_flow(flow_type, dot, nodes, l_nodes, l_name, node_id, l_logs, contact_id, lambda_logs, error_count, env, region):
+def process_sub_flow(flow_type, dot, nodes, l_nodes, l_name, node_id, l_logs, contact_id, lambda_logs, error_count, env, region, display_name=None):
     """flow 묶음 처리"""
+    if display_name is None:
+        display_name = l_name
     min_timestamp, max_timestamp = None, None
     module_error_count = 0
 
@@ -186,7 +188,7 @@ def process_sub_flow(flow_type, dot, nodes, l_nodes, l_name, node_id, l_logs, co
 
     elif flow_type == "flow":
         module_stack = f"__{l_name}"
-        sub_dot, error_count = build_contact_flow_detail(l_logs, l_name, contact_id, lambda_logs, error_count, module_stack, env, region)
+        sub_dot, error_count = build_contact_flow_detail(l_logs, display_name, contact_id, lambda_logs, error_count, module_stack, env, region)
         node_title = "TransferToFlow"
         sub_file = f"./virtual_env/{flow_type}_{contact_id}_{node_id}{module_stack}"
 
@@ -203,7 +205,7 @@ def process_sub_flow(flow_type, dot, nodes, l_nodes, l_name, node_id, l_logs, co
 
     l_label = get_node_label(
         node_title,
-        f"{l_name}  ➡️",
+        f"{display_name.replace(chr(10), '<br/>')}  ➡️",
         f"{str(min_timestamp).replace('000+00:00', '')} ~ \n{str(max_timestamp).replace('000+00:00', '')}",
         f"Nodes : {len(l_logs)}\n" + error_count_text,
         None
@@ -309,20 +311,27 @@ def build_main_flow(logs, lambda_logs, contact_id, env, region):
     nodes = []
     flow_nodes = {}
 
-    node_info = defaultdict(lambda: {"contact_flow_name": "", "subnode": []})
+    node_info = defaultdict(lambda: {"contact_flow_name": "", "contact_flow_names": [], "subnode": []})
 
     for log in logs:
         node_id = f"{contact_id}_{log['node_id']}"
-        if "MOD_" not in log['ContactFlowName']:
-            node_info[node_id]["contact_flow_name"] = log['ContactFlowName']
+        flow_name = log['ContactFlowName']
+        if "MOD_" not in flow_name:
+            if flow_name not in node_info[node_id]["contact_flow_names"]:
+                node_info[node_id]["contact_flow_names"].append(flow_name)
+            if not node_info[node_id]["contact_flow_name"]:
+                node_info[node_id]["contact_flow_name"] = flow_name
         node_info[node_id]["subnode"].append(log)
 
     for node_id, info in node_info.items():
         error_count = 0
+        names = info["contact_flow_names"]
+        display_name = "\n".join(names) if len(names) > 1 else info["contact_flow_name"]
         main_flow_dot, nodes, flow_nodes, error_count = process_sub_flow(
             "flow", main_flow_dot, nodes, flow_nodes,
             info['contact_flow_name'], node_id, info["subnode"],
-            contact_id, lambda_logs, error_count, env, region
+            contact_id, lambda_logs, error_count, env, region,
+            display_name=display_name
         )
 
     main_flow_dot = add_edges(main_flow_dot, nodes)

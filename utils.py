@@ -15,6 +15,7 @@ from describe_flow import get_contact_flow, \
                         get_contact_flow_module
 
 from fetch_data_from_s3 import decompress_datadog_logs
+from constants import GROUPED_CONTACT_FLOW_NAMES
 
 # 그래프에서 한 줄에 표시할 노드 수 
 COLS_NUM = 5
@@ -43,8 +44,9 @@ def generate_node_ids(logs,sort=True):
     for log in logs:
         flow_name = log['ContactFlowName']
 
-        if last_flow_name and ("MOD_" in flow_name or flow_name == last_flow_name):
-            # MOD_ 또는 이전과 동일한 Entry라면 같은 node_id 유지
+        if last_flow_name and ("MOD_" in flow_name or flow_name == last_flow_name
+                               or (flow_name in GROUPED_CONTACT_FLOW_NAMES and last_flow_name in GROUPED_CONTACT_FLOW_NAMES)):
+            # MOD_ 또는 이전과 동일한 Entry 또는 연속된 Grouped Flow라면 같은 node_id 유지
             log['node_id'] = last_node_id
         else:
             # 새로운 Entry 노드가 등장하면 새로운 node_id 할당
